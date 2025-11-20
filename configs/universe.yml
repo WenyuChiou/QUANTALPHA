@@ -1,0 +1,49 @@
+# Universe definitions for US large-cap indices
+universes:
+  sp500:
+    name: "S&P 500"
+    description: "Standard & Poor's 500 Index"
+    source: "yfinance"
+    symbol: "^GSPC"
+    constituents_source: "sp500_list"  # Can be fetched from yfinance or external source
+    trading_calendar: "NYSE"
+    
+  nasdaq100:
+    name: "NASDAQ-100"
+    description: "NASDAQ-100 Index"
+    source: "yfinance"
+    symbol: "^NDX"
+    constituents_source: "nasdaq100_list"
+    trading_calendar: "NASDAQ"
+    
+  russell1000:
+    name: "Russell 1000"
+    description: "Russell 1000 Index"
+    source: "yfinance"
+    symbol: "^RUI"
+    constituents_source: "russell1000_list"
+    trading_calendar: "NYSE"
+
+# Trading calendar settings
+trading_calendar:
+  NYSE:
+    timezone: "America/New_York"
+    open_time: "09:30"
+    close_time: "16:00"
+    holidays: "NYSE_holidays"
+    
+  NASDAQ:
+    timezone: "America/New_York"
+    open_time: "09:30"
+    close_time: "16:00"
+    holidays: "NASDAQ_holidays"
+
+# Default universe for new factors
+default_universe: "sp500"
+
+# Data frequency
+frequency: "D"  # Daily
+
+# Lookback period for initial data fetch (days)
+default_lookback_days: 2500  # ~10 years
+

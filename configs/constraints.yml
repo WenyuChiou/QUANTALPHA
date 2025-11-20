@@ -1,0 +1,65 @@
+# Validation constraints and rules
+
+# No-lookahead rules
+no_lookahead:
+  enabled: true
+  min_lag_days: 1  # Minimum 1-day lag for all dependent series
+  check_future_data: true
+  check_calendar_alignment: true
+  
+# Sample size requirements
+sample_size:
+  min_history_days: 800  # Minimum ~3 years of daily data
+  min_observations: 800
+  min_tickers: 50  # Minimum number of tickers in universe
+  
+# Walk-forward validation
+walk_forward:
+  purge_gap_days: 21  # Embargo period between train/test
+  min_train_days: 252  # Minimum 1 year training period
+  min_test_days: 63  # Minimum 1 quarter test period
+  n_splits: 5  # Number of walk-forward splits
+  
+# Turnover constraints
+turnover:
+  max_monthly_turnover_pct: 250  # Maximum 250% monthly turnover
+  max_daily_turnover_pct: 50  # Maximum 50% daily turnover
+  warn_threshold_pct: 150  # Warning at 150% monthly
+  
+# Risk budgets
+risk_budgets:
+  max_leverage: 2.0  # Maximum 2x leverage
+  max_single_position_pct: 10  # Maximum 10% in single position
+  max_sector_concentration_pct: 30  # Maximum 30% in single sector
+  max_industry_concentration_pct: 20  # Maximum 20% in single industry
+  
+# Performance targets (for filtering)
+targets:
+  min_sharpe: 1.0
+  max_maxdd: 0.35  # Maximum 35% drawdown
+  min_avg_ic: 0.05  # Minimum average IC of 0.05
+  min_ir: 0.5  # Minimum Information Ratio
+  min_hit_rate: 0.52  # Minimum 52% hit rate
+  
+# Stability requirements
+stability:
+  min_rolling_sharpe_periods: 4  # Must pass in at least 4 rolling periods
+  rolling_period_days: 252  # 1-year rolling windows
+  ic_stability_threshold: 0.03  # IC should not drop below this in any period
+  max_sharpe_drawdown_pct: 50  # Rolling Sharpe should not drop more than 50%
+  
+# Regime robustness
+regime_robustness:
+  enabled: true
+  required_regimes: ["high_vol", "low_vol", "bull", "bear"]
+  min_regime_samples: 63  # Minimum 1 quarter per regime
+  min_regime_sharpe: 0.5  # Minimum Sharpe in each regime
+  
+# Leakage detection
+leakage_detection:
+  enabled: true
+  check_future_returns: true
+  check_future_volatility: true
+  check_future_correlation: true
+  max_future_correlation: 0.1  # Flag if correlation with future > 0.1
+

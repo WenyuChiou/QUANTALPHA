@@ -1,0 +1,32 @@
+# Trading costs configuration
+
+# Slippage (basis points per trade)
+slippage:
+  bps_per_trade: 5  # 5 basis points = 0.05%
+  market_impact_model: "linear"  # linear, sqrt, or square
+  
+# Commission fees
+fees:
+  commission_per_share: 0.0  # $0 per share (most brokers are commission-free)
+  commission_per_trade: 0.0  # $0 per trade
+  minimum_commission: 0.0
+  
+# Short borrowing costs
+borrow:
+  bps_annual: 50  # 50 basis points annual = ~0.42 bps per day
+  borrow_cost_model: "fixed_rate"  # fixed_rate or dynamic
+  
+# Lot size constraints
+lot_size:
+  min_shares: 1
+  round_lots: false  # If true, round to 100-share lots
+  
+# Cost application method
+cost_method: "proportional"  # proportional or fixed
+
+# Turnover-based cost scaling (optional)
+turnover_scaling:
+  enabled: false
+  base_turnover: 1.0  # 100% monthly turnover
+  scaling_factor: 1.0
+
