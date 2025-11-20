@@ -36,6 +36,23 @@ class ResearcherAgent:
             input_variables=["context", "success_examples", "error_examples", "requirements"],
             template="""You are a quantitative researcher designing factor strategies for US large-cap equities.
 
+## CRITICAL PRIORITY: MOMENTUM FACTORS
+**MOMENTUM FACTORS ARE EXTREMELY IMPORTANT AND SHOULD BE GIVEN HIGHEST PRIORITY.**
+
+Momentum factors have shown:
+- Strong empirical evidence across decades of research
+- Robust performance across different market regimes
+- High Sharpe ratios (typically 1.0-2.0, **must achieve >= 1.8 to pass**)
+- Persistent predictive power (IC typically 0.05-0.10)
+- Well-documented academic support (Jegadeesh & Titman, Moskowitz et al.)
+- **CRITICAL**: Must achieve Sharpe >= 1.8 and MaxDD <= -25% to be acceptable
+
+**ALWAYS PRIORITIZE MOMENTUM-BASED FACTORS** such as:
+- Time Series Momentum (TSMOM): RET_LAG(1,252) - RET_LAG(1,21)
+- Cross-sectional momentum: Ranking past returns
+- Volatility-scaled momentum: Momentum scaled by realized volatility
+- Industry-neutralized momentum: Momentum after removing industry effects
+
 ## Context
 {context}
 
@@ -48,13 +65,52 @@ class ResearcherAgent:
 ## Requirements
 {requirements}
 
+## METRICS REQUIREMENTS (CRITICAL)
+**ALL FACTORS MUST MEET THESE PERFORMANCE TARGETS:**
+
+### Required Performance Metrics:
+1. **Sharpe Ratio**: Minimum 1.8 (target: 2.0+ for momentum factors)
+   - Momentum factors typically achieve 1.0-2.0 Sharpe
+   - **CRITICAL**: Below 1.8 is considered insufficient
+   - Target 2.0+ for production-ready momentum factors
+
+2. **Maximum Drawdown**: Maximum -25% (target: -20% or better)
+   - **CRITICAL**: Drawdowns above -25% are unacceptable
+   - Momentum factors must maintain drawdowns below -25%
+   - Target -20% or better for production use
+
+3. **Information Coefficient (IC)**: Minimum 0.05 (target: 0.06+ for momentum)
+   - IC below 0.05 indicates weak predictive power
+   - Momentum factors typically show IC of 0.05-0.10
+
+4. **Information Ratio (IR)**: Minimum 0.5 (target: 0.6+)
+   - IR measures risk-adjusted IC
+   - Below 0.5 indicates poor risk-adjusted performance
+
+5. **Hit Rate**: Minimum 52% (target: 54%+)
+   - Percentage of periods with positive IC
+   - Below 52% indicates inconsistent performance
+
+6. **Turnover**: Maximum 250% monthly (target: <200%)
+   - High turnover increases transaction costs
+   - Momentum factors should aim for 30-60% monthly turnover
+
+### Additional Quality Metrics:
+- **Stability**: Rolling Sharpe should not drop more than 50% from peak
+- **Regime Robustness**: Must perform in at least 3 out of 4 regimes (high_vol, low_vol, bull, bear)
+- **IC Stability**: IC should not drop below 0.03 in any rolling period
+- **Sample Size**: Minimum 800 days of history required
+
 ## Task
 Design 3 Factor DSL YAML specifications that:
-1. Focus on momentum/volatility factors
-2. Avoid lookahead (use RET_LAG with lag >= 1)
-3. Include proper normalization (zscore_252, zscore_63, etc.)
-4. Specify validation constraints and targets
-5. Are simple, leak-free transforms
+1. **PRIORITIZE MOMENTUM FACTORS** - At least 2 out of 3 should be momentum-based
+2. **MEET ALL METRICS REQUIREMENTS** - Ensure targets section specifies all required metrics
+3. Focus on momentum/volatility factors (momentum is most important)
+4. Avoid lookahead (use RET_LAG with lag >= 1)
+5. Include proper normalization (zscore_252, zscore_63, etc.)
+6. Specify validation constraints and targets (must include all metrics above)
+7. Are simple, leak-free transforms
+8. Consider volatility scaling for momentum factors (VOL_TARGET)
 
 Output each factor as a complete YAML block following this structure:
 
@@ -75,9 +131,12 @@ validation:
   purge_gap_days: 21
   max_turnover_monthly: 250.0
 targets:
-  min_sharpe: 1.0
-  max_maxdd: 0.35
-  min_avg_ic: 0.05
+  min_sharpe: 1.8          # Required: Minimum Sharpe ratio (1.8)
+  max_maxdd: 0.25          # Required: Maximum drawdown (-25%)
+  min_avg_ic: 0.05         # Required: Minimum average IC
+  min_ir: 0.5              # Required: Minimum Information Ratio
+  min_hit_rate: 0.52       # Required: Minimum hit rate (52%)
+  max_turnover_monthly: 250.0  # Required: Maximum monthly turnover (250%)
 ```
 
 Provide 3 complete YAML factor specifications.
@@ -103,11 +162,18 @@ Provide 3 complete YAML factor specifications.
             List of factor proposals (YAML strings)
         """
         # Gather context from RAG
+        # ALWAYS prioritize momentum factors in search
         context_queries = []
         if focus_topics:
+            # Ensure momentum is included if not already present
+            if "momentum" not in [t.lower() for t in focus_topics]:
+                context_queries.append("momentum factor design time series momentum")
             context_queries.extend([f"{topic} factor design" for topic in focus_topics])
         else:
-            context_queries.append("momentum volatility factor design")
+            # Default: prioritize momentum
+            context_queries.append("momentum factor design time series momentum TSMOM")
+            context_queries.append("volatility scaled momentum factor")
+            context_queries.append("cross-sectional momentum factor")
         
         # Search knowledge base
         context_results = []
@@ -127,10 +193,20 @@ Provide 3 complete YAML factor specifications.
         
         # Build requirements
         req_text = requirements or """
-- Target: Sharpe >= 1.0, MaxDD <= 35%, Avg IC >= 0.05
+- **PRIORITY: MOMENTUM FACTORS ARE CRITICAL** - Prioritize momentum-based designs
+- **METRICS REQUIREMENTS (MUST MEET ALL)**:
+  * Sharpe Ratio: >= 1.8 (target: 2.0+ for momentum) - **CRITICAL: Must be >= 1.8**
+  * Max Drawdown: <= -25% (target: -20% or better) - **CRITICAL: Must be <= -25%**
+  * Average IC: >= 0.05 (target: 0.06+ for momentum)
+  * Information Ratio: >= 0.5 (target: 0.6+)
+  * Hit Rate: >= 52% (target: 54%+)
+  * Monthly Turnover: <= 250% (target: <200%)
 - Universe: US large-cap (S&P 500)
 - Frequency: Daily
-- Avoid lookahead, ensure sufficient sample size
+- Avoid lookahead, ensure sufficient sample size (min 800 days)
+- Momentum factors typically use: RET_LAG(1,252) for 12-month momentum, RET_LAG(1,21) to skip recent month
+- Consider volatility scaling: VOL_TARGET(ann_vol=0.15) for momentum factors
+- All factors must pass stability and regime robustness checks
 """
         
         # Generate proposals

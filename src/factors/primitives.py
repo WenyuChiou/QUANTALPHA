@@ -217,8 +217,348 @@ def REGIME_TREND(prices: pd.Series, short_window: int = 21, long_window: int = 6
     return regime
 
 
+# ============================================================================
+# WorldQuant-inspired primitives
+# ============================================================================
+
+def DELTA(series: pd.Series, periods: int = 1) -> pd.Series:
+    """Calculate first difference (delta).
+    
+    Args:
+        series: Input series
+        periods: Number of periods to difference (default 1)
+    
+    Returns:
+        Differenced series
+    """
+    return series.diff(periods)
+
+
+def DECAY_LINEAR(series: pd.Series, window: int) -> pd.Series:
+    """Linear decay function (weighted moving average with linear weights).
+    
+    More recent values get higher weights. Weights decrease linearly.
+    
+    Args:
+        series: Input series
+        window: Decay window size
+    
+    Returns:
+        Linearly decayed series
+    """
+    weights = np.arange(1, window + 1)
+    weights = weights / weights.sum()  # Normalize
+    
+    result = pd.Series(index=series.index, dtype=float)
+    for i in range(window - 1, len(series)):
+        window_data = series.iloc[i - window + 1:i + 1]
+        if len(window_data) == window:
+            result.iloc[i] = (window_data * weights[::-1]).sum()
+    
+    return result
+
+
+def TS_RANK(series: pd.Series, window: int) -> pd.Series:
+    """Time-series rank.
+    
+    Ranks values within a rolling window (1 = highest, 0 = lowest).
+    
+    Args:
+        series: Input series
+        window: Rolling window size
+    
+    Returns:
+        Time-series rank (0 to 1, where 1 is highest)
+    """
+    def rank_func(x):
+        if len(x) == 0:
+            return np.nan
+        return pd.Series(x).rank(pct=True).iloc[-1]
+    
+    return series.rolling(window=window).apply(rank_func, raw=True)
+
+
+def TS_ARGMAX(series: pd.Series, window: int) -> pd.Series:
+    """Time-series argument maximum.
+    
+    Returns the number of periods since the maximum value in the window.
+    
+    Args:
+        series: Input series
+        window: Rolling window size
+    
+    Returns:
+        Periods since maximum (0 = current period is max)
+    """
+    result = pd.Series(index=series.index, dtype=float)
+    for i in range(window - 1, len(series)):
+        window_data = series.iloc[i - window + 1:i + 1]
+        if len(window_data) > 0:
+            max_idx = window_data.idxmax()
+            periods_ago = i - series.index.get_loc(max_idx)
+            result.iloc[i] = periods_ago
+    
+    return result
+
+
+def TS_ARGMIN(series: pd.Series, window: int) -> pd.Series:
+    """Time-series argument minimum.
+    
+    Returns the number of periods since the minimum value in the window.
+    
+    Args:
+        series: Input series
+        window: Rolling window size
+    
+    Returns:
+        Periods since minimum (0 = current period is min)
+    """
+    result = pd.Series(index=series.index, dtype=float)
+    for i in range(window - 1, len(series)):
+        window_data = series.iloc[i - window + 1:i + 1]
+        if len(window_data) > 0:
+            min_idx = window_data.idxmin()
+            periods_ago = i - series.index.get_loc(min_idx)
+            result.iloc[i] = periods_ago
+    
+    return result
+
+
+def CORRELATION(series1: pd.Series, series2: pd.Series, window: int) -> pd.Series:
+    """Rolling correlation between two series.
+    
+    Args:
+        series1: First series
+        series2: Second series
+        window: Rolling window size
+    
+    Returns:
+        Rolling correlation series
+    """
+    return series1.rolling(window=window).corr(series2)
+
+
+def COVARIANCE(series1: pd.Series, series2: pd.Series, window: int) -> pd.Series:
+    """Rolling covariance between two series.
+    
+    Args:
+        series1: First series
+        series2: Second series
+        window: Rolling window size
+    
+    Returns:
+        Rolling covariance series
+    """
+    return series1.rolling(window=window).cov(series2)
+
+
+def VWAP(high: pd.Series, low: pd.Series, close: pd.Series, volume: pd.Series) -> pd.Series:
+    """Volume-weighted average price.
+    
+    Args:
+        high: High prices
+        low: Low prices
+        close: Close prices
+        volume: Volume
+    
+    Returns:
+        VWAP series
+    """
+    typical_price = (high + low + close) / 3
+    return (typical_price * volume).rolling(window=len(typical_price)).sum() / volume.rolling(window=len(volume)).sum()
+
+
+def ADV(volume: pd.Series, window: int = 20) -> pd.Series:
+    """Average daily volume.
+    
+    Args:
+        volume: Volume series
+        window: Rolling window size (default 20 days)
+    
+    Returns:
+        Average daily volume series
+    """
+    return volume.rolling(window=window).mean()
+
+
+def INDNEUTRALIZE(
+    series: pd.Series,
+    industry_map: Optional[pd.Series] = None,
+    method: str = "demean"
+) -> pd.Series:
+    """Industry neutralization.
+    
+    Removes industry-level effects from a series.
+    
+    Args:
+        series: Input series (can be DataFrame for cross-sectional)
+        industry_map: Series mapping tickers to industries (if None, uses simple demean)
+        method: Neutralization method ('demean' or 'zscore')
+    
+    Returns:
+        Industry-neutralized series
+    """
+    if isinstance(series, pd.DataFrame):
+        # Cross-sectional neutralization
+        if industry_map is None:
+            # Simple cross-sectional demean
+            return series.sub(series.mean(axis=1), axis=0)
+        else:
+            # Group by industry and neutralize
+            result = series.copy()
+            for industry in industry_map.unique():
+                industry_tickers = industry_map[industry_map == industry].index
+                industry_data = series[industry_tickers]
+                if method == "demean":
+                    result[industry_tickers] = industry_data.sub(industry_data.mean(axis=1), axis=0)
+                else:  # zscore
+                    mean = industry_data.mean(axis=1)
+                    std = industry_data.std(axis=1)
+                    result[industry_tickers] = industry_data.sub(mean, axis=0).div(std.replace(0, np.nan), axis=0)
+            return result
+    else:
+        # Time-series: simple demean (would need industry info for proper neutralization)
+        if method == "demean":
+            return series - series.mean()
+        else:
+            return (series - series.mean()) / series.std()
+
+
+def SCALE(series: pd.Series, scale: float = 1.0) -> pd.Series:
+    """Scale a series.
+    
+    Args:
+        series: Input series
+        scale: Scaling factor
+    
+    Returns:
+        Scaled series
+    """
+    return series * scale
+
+
+def INDCLASS_NEUTRALIZE(
+    series: pd.DataFrame,
+    indclass: pd.Series,
+    method: str = "demean"
+) -> pd.DataFrame:
+    """Industry class neutralization (wrapper for INDNEUTRALIZE).
+    
+    Args:
+        series: Cross-sectional data (DataFrame)
+        indclass: Industry classification series
+        method: Neutralization method
+    
+    Returns:
+        Industry-neutralized DataFrame
+    """
+    return INDNEUTRALIZE(series, industry_map=indclass, method=method)
+
+
+def SUM(series: pd.Series, window: int) -> pd.Series:
+    """Rolling sum.
+    
+    Args:
+        series: Input series
+        window: Rolling window size
+    
+    Returns:
+        Rolling sum series
+    """
+    return series.rolling(window=window).sum()
+
+
+def PRODUCT(series: pd.Series, window: int) -> pd.Series:
+    """Rolling product.
+    
+    Args:
+        series: Input series
+        window: Rolling window size
+    
+    Returns:
+        Rolling product series
+    """
+    return series.rolling(window=window).apply(lambda x: np.prod(x), raw=True)
+
+
+def SIGN(series: pd.Series) -> pd.Series:
+    """Sign function (-1, 0, or 1).
+    
+    Args:
+        series: Input series
+    
+    Returns:
+        Sign series
+    """
+    return np.sign(series)
+
+
+def POWER(series: pd.Series, exponent: float) -> pd.Series:
+    """Power function.
+    
+    Args:
+        series: Input series
+        exponent: Exponent
+    
+    Returns:
+        Series raised to power
+    """
+    return series ** exponent
+
+
+def LOG(series: pd.Series) -> pd.Series:
+    """Natural logarithm.
+    
+    Args:
+        series: Input series
+    
+    Returns:
+        Log series
+    """
+    return np.log(series.clip(lower=1e-10))  # Avoid log(0)
+
+
+def ABS(series: pd.Series) -> pd.Series:
+    """Absolute value.
+    
+    Args:
+        series: Input series
+    
+    Returns:
+        Absolute value series
+    """
+    return series.abs()
+
+
+def MAX(series1: pd.Series, series2: pd.Series) -> pd.Series:
+    """Element-wise maximum.
+    
+    Args:
+        series1: First series
+        series2: Second series
+    
+    Returns:
+        Element-wise maximum
+    """
+    return pd.concat([series1, series2], axis=1).max(axis=1)
+
+
+def MIN(series1: pd.Series, series2: pd.Series) -> pd.Series:
+    """Element-wise minimum.
+    
+    Args:
+        series1: First series
+        series2: Second series
+    
+    Returns:
+        Element-wise minimum
+    """
+    return pd.concat([series1, series2], axis=1).min(axis=1)
+
+
 # Dictionary mapping function names to implementations
 PRIMITIVES = {
+    # Basic operations
     'RET_LAG': RET_LAG,
     'RET_D': RET_D,
     'ROLL_STD': ROLL_STD,
@@ -238,5 +578,27 @@ PRIMITIVES = {
     'QUANTILE': QUANTILE,
     'REGIME_VOLATILITY': REGIME_VOLATILITY,
     'REGIME_TREND': REGIME_TREND,
+    
+    # WorldQuant-inspired primitives
+    'DELTA': DELTA,
+    'DECAY_LINEAR': DECAY_LINEAR,
+    'TS_RANK': TS_RANK,
+    'TS_ARGMAX': TS_ARGMAX,
+    'TS_ARGMIN': TS_ARGMIN,
+    'CORRELATION': CORRELATION,
+    'COVARIANCE': COVARIANCE,
+    'VWAP': VWAP,
+    'ADV': ADV,
+    'INDNEUTRALIZE': INDNEUTRALIZE,
+    'INDCLASS_NEUTRALIZE': INDCLASS_NEUTRALIZE,
+    'SCALE': SCALE,
+    'SUM': SUM,
+    'PRODUCT': PRODUCT,
+    'SIGN': SIGN,
+    'POWER': POWER,
+    'LOG': LOG,
+    'ABS': ABS,
+    'MAX': MAX,
+    'MIN': MIN,
 }
 

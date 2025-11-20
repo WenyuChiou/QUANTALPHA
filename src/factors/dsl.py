@@ -75,6 +75,37 @@ class DSLParser:
             if int(lag) < 1:
                 warnings.append(f"ERROR: {context} RET_LAG has lag < 1 (lookahead): {expr}")
         
+        # Check DELTA usage - ensure positive periods
+        delta_matches = re.findall(r'DELTA\s*\(\s*[^,]+,\s*(\d+)', expr_lower)
+        for period in delta_matches:
+            if int(period) < 1:
+                warnings.append(f"WARNING: {context} DELTA has period < 1: {expr}")
+        
+        # Check TS_RANK, TS_ARGMAX, TS_ARGMIN - ensure positive windows
+        ts_functions = ['ts_rank', 'ts_argmax', 'ts_argmin']
+        for func in ts_functions:
+            func_matches = re.findall(rf'{func}\s*\(\s*[^,]+,\s*(\d+)', expr_lower)
+            for window in func_matches:
+                if int(window) < 1:
+                    warnings.append(f"ERROR: {context} {func.upper()} has window < 1: {expr}")
+        
+        # Check DECAY_LINEAR - ensure positive windows
+        decay_matches = re.findall(r'decay_linear\s*\(\s*[^,]+,\s*(\d+)', expr_lower)
+        for window in decay_matches:
+            if int(window) < 1:
+                warnings.append(f"ERROR: {context} DECAY_LINEAR has window < 1: {expr}")
+        
+        # Check CORRELATION - ensure positive windows
+        corr_matches = re.findall(r'correlation\s*\(\s*[^,]+,\s*[^,]+,\s*(\d+)', expr_lower)
+        for window in corr_matches:
+            if int(window) < 1:
+                warnings.append(f"ERROR: {context} CORRELATION has window < 1: {expr}")
+        
+        # Check INDNEUTRALIZE syntax
+        if 'indneutralize' in expr_lower or 'indclass_neutralize' in expr_lower:
+            # Industry neutralization is safe (no lookahead)
+            pass
+        
         # Check for direct future return references
         if re.search(r'RET\[.*\+.*\]', expr) or re.search(r'RET\.shift\s*\(\s*-\d+', expr):
             warnings.append(f"ERROR: {context} may reference future returns: {expr}")
@@ -91,6 +122,37 @@ class DSLParser:
             numbers = re.findall(r'\d+', signal.expr)
             if numbers:
                 params[f"{signal.id}_params"] = [int(n) for n in numbers]
+            
+            # Extract function-specific parameters
+            # RET_LAG(lag, period)
+            lag_matches = re.findall(r'RET_LAG\s*\(\s*(\d+)\s*,\s*(\d+)', signal.expr)
+            if lag_matches:
+                params[f"{signal.id}_lag"] = int(lag_matches[0][0])
+                params[f"{signal.id}_period"] = int(lag_matches[0][1])
+            
+            # DELTA(series, periods)
+            delta_matches = re.findall(r'DELTA\s*\(\s*[^,]+,\s*(\d+)', signal.expr)
+            if delta_matches:
+                params[f"{signal.id}_delta_periods"] = int(delta_matches[0])
+            
+            # TS_RANK(series, window)
+            ts_rank_matches = re.findall(r'TS_RANK\s*\(\s*[^,]+,\s*(\d+)', signal.expr, re.IGNORECASE)
+            if ts_rank_matches:
+                params[f"{signal.id}_ts_rank_window"] = int(ts_rank_matches[0])
+            
+            # DECAY_LINEAR(series, window)
+            decay_matches = re.findall(r'DECAY_LINEAR\s*\(\s*[^,]+,\s*(\d+)', signal.expr, re.IGNORECASE)
+            if decay_matches:
+                params[f"{signal.id}_decay_window"] = int(decay_matches[0])
+            
+            # CORRELATION(series1, series2, window)
+            corr_matches = re.findall(r'CORRELATION\s*\(\s*[^,]+,\s*[^,]+,\s*(\d+)', signal.expr, re.IGNORECASE)
+            if corr_matches:
+                params[f"{signal.id}_corr_window"] = int(corr_matches[0])
+            
+            # Check for industry neutralization
+            if 'INDNEUTRALIZE' in signal.expr.upper() or 'INDCLASS_NEUTRALIZE' in signal.expr.upper():
+                params[f"{signal.id}_industry_neutralized"] = True
             
             # Extract normalization window if present
             if signal.normalize:
@@ -115,7 +177,7 @@ class DSLParser:
         Args:
             spec: Original factor spec
             mutations: Dictionary of mutations to apply
-                e.g., {"signals.0.expr": "RET_LAG(1,126)", "targets.min_sharpe": 1.5}
+                e.g., {"signals.0.expr": "RET_LAG(1,126)", "targets.min_sharpe": 1.8}
         """
         spec_dict = spec.dict()
         
@@ -132,4 +194,42 @@ class DSLParser:
         
         # Recreate spec from mutated dict
         return FactorSpec(**spec_dict)
+    
+    def validate_supported_operations(self, spec: FactorSpec) -> Tuple[bool, List[str]]:
+        """Validate that all operations in the factor are supported.
+        
+        Returns:
+            (is_valid, list_of_warnings)
+        """
+        warnings = []
+        supported_ops = [
+            'RET_LAG', 'RET_D', 'ROLL_STD', 'ROLL_MEAN', 'ROLL_MAX', 'ROLL_MIN',
+            'VOL_TARGET', 'ZSCORE', 'CORRELATION_DECAY', 'DRAWDOWN_RECOVERY',
+            'SKEW', 'KURTOSIS', 'RANK', 'QUANTILE', 'REGIME_VOLATILITY', 'REGIME_TREND',
+            'DELTA', 'DECAY_LINEAR', 'TS_RANK', 'TS_ARGMAX', 'TS_ARGMIN',
+            'CORRELATION', 'COVARIANCE', 'VWAP', 'ADV', 'INDNEUTRALIZE',
+            'INDCLASS_NEUTRALIZE', 'SCALE', 'SUM', 'PRODUCT', 'SIGN', 'POWER',
+            'LOG', 'ABS', 'MAX', 'MIN'
+        ]
+        
+        for signal in spec.signals:
+            # Extract function names from expression
+            func_matches = re.findall(r'(\w+)\s*\(', signal.expr.upper())
+            for func in func_matches:
+                if func not in [op.upper() for op in supported_ops] and func not in ['ZSCORE_252', 'ZSCORE_63', 'ZSCORE_21']:
+                    warnings.append(f"WARNING: {signal.id} uses unsupported operation: {func}")
+        
+        is_valid = len([w for w in warnings if "ERROR" in w]) == 0
+        return is_valid, warnings
+    
+    def get_operation_complexity(self, spec: FactorSpec) -> Dict[str, Any]:
+        """Calculate complexity metrics for the factor.
+        
+        Returns:
+            Dictionary with complexity metrics
+        """
+        from ..backtest.decay_monitor import AlphaDecayMonitor
+        
+        monitor = AlphaDecayMonitor()
+        return monitor.calculate_complexity(spec.to_yaml())
 

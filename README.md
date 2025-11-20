@@ -11,23 +11,20 @@ A production-ready framework for automated factor discovery using LLM agents, RA
 - **Anti-Leakage**: Built-in lookahead detection and validation
 - **Streamlit Dashboard**: Interactive visualization of results
 - **Knowledge Base**: Curated papers, notes, and run summaries
+- **Hedge Fund Workflow**: Professional research process (hypothesis → design → backtest → analysis)
 
-## Architecture
+## Research Workflow
 
-### Agents
-1. **Researcher**: Proposes Factor DSL specs using RAG-seeded ideation
-2. **Feature Agent**: Executes Factor DSL and computes features
-3. **Backtester**: Runs walk-forward backtests
-4. **Critic**: Validates runs and writes failure/success cards
-5. **Librarian**: Manages RAG index and knowledge curation
-6. **Reporter**: Generates summaries and iteration plans
+The framework implements a **professional hedge fund research workflow**:
 
-### Components
-- **Factor DSL**: YAML-based factor specification language
-- **RAG System**: Chroma vector DB with sentence-transformers (bge-m3)
-- **Memory Layer**: SQLite database for experiments, runs, metrics, lessons
-- **Backtest Engine**: Purged walk-forward with portfolio construction
-- **Validation**: Leakage detection, stability checks, regime robustness
+1. **Hypothesis Formation**: Form research hypothesis with theoretical basis
+2. **Peer Review**: Get approval before implementation
+3. **Factor Design**: Translate hypothesis to Factor DSL
+4. **Backtesting**: Run comprehensive backtests
+5. **Analysis**: Deep-dive performance, risk, regime analysis
+6. **Documentation**: Document findings for knowledge base
+
+See [Research Workflow Documentation](docs/RESEARCH_WORKFLOW.md) for details.
 
 ## Quick Start
 
@@ -49,141 +46,150 @@ cd QuantAlpha
 # Install dependencies
 pip install -r requirements.txt
 
-# Initialize knowledge base index
-python -m src.rag.indexer --kb ./kb --out ./kb.index
+# Setup environment
+make setup
+# Or manually:
+python scripts/setup_env.py
+```
+
+### Verify Installation
+
+```bash
+# Quick verification
+python scripts/verify_pipeline.py
+
+# Or run complete pipeline test
+make run-full-pipeline
 ```
 
 ### Usage
 
+#### Run Complete Pipeline
+
+```bash
+# Generate alpha factor and evaluation report
+make run-full-pipeline
+
+# Or directly:
+python scripts/run_full_pipeline.py
+```
+
 #### Run Orchestrator
 
 ```bash
-# Run single iteration with 3 candidates
-python -m src.agents.orchestrator --universe sp500 --n_candidates 3
-
-# Run multiple iterations
-python -m src.agents.orchestrator --universe sp500 --n_iterations 5 --n_candidates 3
+make run-orchestrator
 ```
 
 #### Start Dashboard
 
 ```bash
-streamlit run src/dashboard/app.py
+make run-dashboard
 ```
 
 #### Index Knowledge Base
 
 ```bash
-python -m src.rag.indexer
+make index-kb
 ```
+
+## Architecture
+
+### Agents
+
+1. **Researcher**: Proposes Factor DSL specs using RAG-seeded ideation (prioritizes momentum factors)
+2. **Feature Agent**: Executes Factor DSL and computes features
+3. **Backtester**: Runs walk-forward backtests
+4. **Critic**: Validates runs and writes failure/success cards
+5. **Librarian**: Manages RAG index and knowledge curation
+6. **Reporter**: Generates summaries and iteration plans
+
+### Components
+
+- **Factor DSL**: YAML-based factor specification language
+- **RAG System**: Chroma vector DB with sentence-transformers (bge-m3)
+- **Memory Layer**: SQLite database for experiments, runs, metrics, lessons
+- **Backtest Engine**: Purged walk-forward with portfolio construction
+- **Validation**: Leakage detection, stability checks, regime robustness
+
+## Metrics Requirements
+
+All factors must meet these performance targets:
+
+- **Sharpe Ratio**: >= 1.0 (target: 1.2+)
+- **Max Drawdown**: >= -35% (target: -30% or better)
+- **Information Coefficient**: >= 0.05 (target: 0.06+)
+- **Information Ratio**: >= 0.5 (target: 0.6+)
+- **Hit Rate**: >= 52% (target: 54%+)
+- **Monthly Turnover**: <= 250% (target: <200%)
+
+See [Metrics Requirements](docs/METRICS_REQUIREMENTS.md) for details.
+
+## Momentum Factor Priority
+
+**MOMENTUM FACTORS ARE EXTREMELY IMPORTANT** and are prioritized throughout the framework. See [Momentum Factor Priority](docs/MOMENTUM_FACTOR_PRIORITY.md) for details.
+
+## Documentation
+
+- [User Guide](docs/USER_GUIDE.md) - Getting started guide
+- [API Reference](docs/API_REFERENCE.md) - API documentation
+- [Research Workflow](docs/RESEARCH_WORKFLOW.md) - Hedge fund research process
+- [Metrics Requirements](docs/METRICS_REQUIREMENTS.md) - Performance standards
+- [Momentum Factor Priority](docs/MOMENTUM_FACTOR_PRIORITY.md) - Why momentum matters
+- [Best Practices](docs/BEST_PRACTICES.md) - Development guidelines
+- [Project Maintenance](docs/PROJECT_MAINTENANCE.md) - Keeping project clean
 
 ## Project Structure
 
 ```
-alpha-miner/
-├── configs/              # Configuration files
-│   ├── universe.yml      # Universe definitions
-│   ├── costs.yml         # Trading costs
-│   └── constraints.yml   # Validation constraints
-├── data/
-│   └── cache/            # yfinance cache
-├── kb/                   # Knowledge base
-│   ├── papers/          # Paper summaries
-│   ├── notes/           # Design notes
-│   └── run_summaries/   # Run post-mortems
-├── experiments/
-│   └── runs/            # Backtest outputs
-└── src/
-    ├── agents/          # LangChain agents
-    ├── tools/           # MCP tools
-    ├── rag/            # RAG system
-    ├── memory/          # Memory layer
-    ├── factors/        # Factor DSL
-    ├── backtest/       # Backtest engine
-    ├── viz/            # Visualization
-    └── dashboard/      # Streamlit dashboard
+QuantAlpha/
+├── configs/          # Configuration files
+├── data/            # Data cache (gitignored)
+├── docs/            # Documentation
+├── examples/        # Example scripts
+├── experiments/     # Experiment outputs (gitignored)
+├── kb/              # Knowledge base
+├── scripts/          # Utility scripts
+├── src/             # Source code
+│   ├── agents/      # LLM agents
+│   ├── backtest/    # Backtesting engine
+│   ├── factors/     # Factor DSL and primitives
+│   ├── memory/      # Database layer
+│   ├── rag/         # RAG system
+│   ├── research/    # Research workflow
+│   └── utils/       # Utilities
+└── tests/           # Test files
 ```
 
-## Factor DSL Example
+## Testing
 
-```yaml
-name: "TSMOM_252_minus_21_volTarget"
-universe: "sp500"
-frequency: "D"
-signals:
-  - id: "mom_long"
-    expr: "RET_LAG(1,252) - RET_LAG(1,21)"
-    normalize: "zscore_252"
-portfolio:
-  scheme: "long_short_deciles"
-  weight: "equal"
-  notional: 1.0
-validation:
-  min_history_days: 800
-  purge_gap_days: 21
-targets:
-  min_sharpe: 1.0
-  max_maxdd: 0.35
-  min_avg_ic: 0.05
+```bash
+# Run all tests
+make test
+
+# Run backend tests
+python scripts/test_backend.py
+
+# Verify pipeline
+python scripts/verify_pipeline.py
+
+# Run complete pipeline
+make run-full-pipeline
 ```
 
-## Configuration
+## Maintenance
 
-### Universe (`configs/universe.yml`)
-Define universes (S&P 500, NASDAQ-100, Russell 1000) and trading calendars.
+```bash
+# Clean temporary files
+make clean
 
-### Costs (`configs/costs.yml`)
-Configure slippage (5 bps), fees, and borrow costs (50 bps annual).
-
-### Constraints (`configs/constraints.yml`)
-Set validation rules: min sample size (800 days), max turnover (250%/mo), targets.
-
-## Learning Loop
-
-1. **RAG-seeded ideation** → Researcher proposes factors using KB + Success Ledger
-2. **Compute & Backtest** → Feature + Backtester produce signals and metrics
-3. **Critique & Lessons** → Critic flags issues and writes lessons
-4. **Log & Summarize** → Reporter creates summaries; Librarian indexes in vector DB
-5. **Exploit** → Orchestrator requests mutations around best factors
-6. **Repeat** with stricter targets or expanded universe
-
-## Dashboard Features
-
-- **Factor Leaderboard**: Sortable by Sharpe, MaxDD, IC, IR, turnover
-- **Performance Analysis**: Equity curves, drawdown charts, metrics
-- **IC Analysis**: Information coefficient timeline and statistics
-- **Regime Analysis**: Performance across different market regimes
-- **Post-Mortems**: Success stories and failure analysis
-
-## Example Factors
-
-Pre-built factor templates:
-- **TSMOM**: Time-series momentum (12m - 1m returns)
-- **Low Vol**: Inverse volatility factor
-- **Vol-Scaled Momentum**: Momentum scaled by volatility
-
-See `src/factors/recipes.py` for examples.
-
-## Validation
-
-The framework includes comprehensive validation:
-- **No-lookahead**: Automatic detection of future data usage
-- **Sample size**: Minimum history requirements
-- **Stability**: Rolling Sharpe/IC checks
-- **Regime robustness**: Performance across different regimes
-- **Leakage detection**: Correlation with future returns
-
-## Contributing
-
-This is a research framework. Contributions welcome!
+# Or use cleanup script
+python scripts/cleanup.py
+```
 
 ## License
 
-[Specify your license]
+MIT
 
-## References
+## Contributing
 
-- Jegadeesh & Titman (1993): "Returns to Buying Winners and Selling Losers"
-- Moskowitz et al. (2012): "Time Series Momentum"
-- Ang et al. (2006): "The Cross-Section of Volatility and Expected Returns"
-
+See [Project Maintenance](docs/PROJECT_MAINTENANCE.md) for guidelines.

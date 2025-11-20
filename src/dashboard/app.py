@@ -26,48 +26,86 @@ if 'store' not in st.session_state:
     st.session_state.store = ExperimentStore("experiments.db")
 
 
+def check_backend_health():
+    """Check if backend components are working.
+    
+    Returns:
+        Tuple of (is_healthy, error_message)
+    """
+    try:
+        # Test database connection
+        store = st.session_state.store
+        session = store.get_session()
+        session.close()
+        
+        # Test basic imports
+        from src.factors.dsl import DSLParser
+        from src.backtest.metrics import sharpe
+        
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
 @st.cache_data
 def load_runs_data():
-    """Load runs data from database."""
-    store = st.session_state.store
-    top_runs = store.get_top_runs(limit=100, order_by="sharpe")
+    """Load runs data from database.
     
-    runs_data = []
-    for run in top_runs:
-        factor = store.get_factor(run.factor_id)
-        metrics = run.metrics[0] if run.metrics else None
+    Returns:
+        DataFrame with runs data, or None if backend not healthy
+    """
+    try:
+        store = st.session_state.store
+        top_runs = store.get_top_runs(limit=100, order_by="sharpe")
         
-        if metrics:
-            runs_data.append({
-                'run_id': run.id,
-                'factor_id': run.factor_id,
-                'factor_name': factor.name if factor else 'Unknown',
-                'sharpe': metrics.sharpe,
-                'maxdd': metrics.maxdd,
-                'avg_ic': metrics.avg_ic,
-                'ir': metrics.ir,
-                'turnover_monthly': metrics.turnover_monthly,
-                'ann_ret': metrics.ann_ret,
-                'ann_vol': metrics.ann_vol,
-                'hit_rate': metrics.hit_rate,
-                'regime': run.regime_label,
-                'start_date': run.start_date,
-                'end_date': run.end_date,
-                'n_issues': len(run.issues)
-            })
-    
-    return pd.DataFrame(runs_data)
+        runs_data = []
+        for run in top_runs:
+            factor = store.get_factor(run.factor_id)
+            metrics = run.metrics[0] if run.metrics else None
+            
+            if metrics:
+                runs_data.append({
+                    'run_id': run.id,
+                    'factor_id': run.factor_id,
+                    'factor_name': factor.name if factor else 'Unknown',
+                    'sharpe': metrics.sharpe,
+                    'maxdd': metrics.maxdd,
+                    'avg_ic': metrics.avg_ic,
+                    'ir': metrics.ir,
+                    'turnover_monthly': metrics.turnover_monthly,
+                    'ann_ret': metrics.ann_ret,
+                    'ann_vol': metrics.ann_vol,
+                    'hit_rate': metrics.hit_rate,
+                    'regime': run.regime_label,
+                    'start_date': run.start_date,
+                    'end_date': run.end_date,
+                    'n_issues': len(run.issues)
+                })
+        
+        return pd.DataFrame(runs_data)
+    except Exception as e:
+        st.error(f"Error loading runs data: {e}")
+        return pd.DataFrame()
 
 
 def main():
     """Main dashboard function."""
     st.title("📈 Alpha-Mining LLM Agent Framework Dashboard")
     
+    # Check backend health first
+    is_healthy, error_msg = check_backend_health()
+    
+    if not is_healthy:
+        st.error(f"⚠️ Backend not ready: {error_msg}")
+        st.info("Please run backend tests first: `python scripts/test_backend.py`")
+        st.stop()
+    
     # Load data
     runs_df = load_runs_data()
     
     if len(runs_df) == 0:
         st.warning("No runs found in database. Run some backtests first!")
+        st.info("Backend is healthy but no data available. Start by running factor discovery.")
         return
     
     # Sidebar filters
@@ -84,9 +122,34 @@ def main():
         (runs_df['avg_ic'] >= min_ic)
     ]
     
+    # Real-time monitoring section
+    st.sidebar.header("📊 Real-Time Monitoring")
+    
+    auto_refresh = st.sidebar.checkbox("Auto-refresh", False)
+    refresh_interval = st.sidebar.slider("Refresh interval (seconds)", 5, 60, 30)
+    
+    if auto_refresh:
+        import time
+        time.sleep(refresh_interval)
+        st.rerun()
+    
+    # Pipeline status
+    st.sidebar.header("Pipeline Status")
+    pipeline_status = get_pipeline_status()
+    st.sidebar.metric("Active Runs", pipeline_status.get('active_runs', 0))
+    st.sidebar.metric("Pending", pipeline_status.get('pending', 0))
+    st.sidebar.metric("Completed Today", pipeline_status.get('completed_today', 0))
+    
+    # Learning metrics
+    st.sidebar.header("Learning Metrics")
+    learning_metrics = get_learning_metrics()
+    st.sidebar.metric("Knowledge Base Size", learning_metrics.get('kb_size', 0))
+    st.sidebar.metric("Success Rate", f"{learning_metrics.get('success_rate', 0):.1%}")
+    st.sidebar.metric("Error Bank Entries", learning_metrics.get('error_bank_size', 0))
+    
     # Main tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "Leaderboard", "Performance", "IC Analysis", "Regime Analysis", "Post-Mortems"
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "Leaderboard", "Performance", "IC Analysis", "Regime Analysis", "Post-Mortems", "Monitoring"
     ])
     
     with tab1:
@@ -278,6 +341,144 @@ def main():
                     st.write("**Issues:**")
                     for issue in issues:
                         st.write(f"- **{issue.type}** ({issue.severity}): {issue.detail}")
+    
+    with tab6:
+        st.header("Real-Time Monitoring")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Iteration Progress")
+            iteration_progress = get_iteration_progress()
+            
+            if iteration_progress:
+                st.metric("Current Iteration", iteration_progress.get('iteration', 0))
+                st.metric("Candidates Generated", iteration_progress.get('candidates', 0))
+                st.metric("In Progress", iteration_progress.get('in_progress', 0))
+                st.metric("Completed", iteration_progress.get('completed', 0))
+            else:
+                st.info("No active iterations")
+        
+        with col2:
+            st.subheader("Factor Pipeline Status")
+            pipeline_status = get_pipeline_status()
+            
+            # Status breakdown
+            status_df = pd.DataFrame([
+                {'Status': 'Pending', 'Count': pipeline_status.get('pending', 0)},
+                {'Status': 'Running', 'Count': pipeline_status.get('running', 0)},
+                {'Status': 'Completed', 'Count': pipeline_status.get('completed', 0)},
+                {'Status': 'Failed', 'Count': pipeline_status.get('failed', 0)}
+            ])
+            
+            st.bar_chart(status_df.set_index('Status'))
+        
+        st.subheader("Learning Metrics Over Time")
+        learning_timeline = get_learning_timeline()
+        
+        if learning_timeline and len(learning_timeline) > 0:
+            timeline_df = pd.DataFrame(learning_timeline)
+            st.line_chart(timeline_df.set_index('date')[['success_rate', 'kb_size']])
+        else:
+            st.info("No historical learning data available")
+        
+        st.subheader("Recent Activity")
+        recent_activity = get_recent_activity(limit=10)
+        
+        if recent_activity:
+            for activity in recent_activity:
+                with st.expander(f"{activity['timestamp']} - {activity['type']}"):
+                    st.write(activity['description'])
+        else:
+            st.info("No recent activity")
+
+
+def get_pipeline_status():
+    """Get current pipeline status."""
+    store = st.session_state.store
+    session = store.get_session()
+    try:
+        pending = session.query(store.Run).filter(store.Run.status == 'pending').count()
+        running = session.query(store.Run).filter(store.Run.status == 'running').count()
+        completed = session.query(store.Run).filter(store.Run.status == 'completed').count()
+        failed = session.query(store.Run).filter(store.Run.status == 'failed').count()
+        
+        return {
+            'pending': pending,
+            'running': running,
+            'completed': completed,
+            'failed': failed,
+            'active_runs': pending + running,
+            'completed_today': completed  # Simplified
+        }
+    finally:
+        session.close()
+
+
+def get_learning_metrics():
+    """Get learning metrics."""
+    store = st.session_state.store
+    from ..memory.lessons import LessonManager
+    
+    lesson_manager = LessonManager(store)
+    
+    success_lessons = lesson_manager.get_success_ledger(limit=1000)
+    failure_lessons = lesson_manager.get_error_bank(limit=1000)
+    
+    total_runs = len(store.get_top_runs(limit=1000))
+    success_count = len([r for r in store.get_top_runs(limit=1000) 
+                        if r.metrics and r.metrics[0].sharpe >= 1.0])
+    
+    success_rate = success_count / total_runs if total_runs > 0 else 0.0
+    
+    return {
+        'kb_size': len(success_lessons) + len(failure_lessons),
+        'success_rate': success_rate,
+        'error_bank_size': len(failure_lessons),
+        'success_ledger_size': len(success_lessons)
+    }
+
+
+def get_iteration_progress():
+    """Get current iteration progress."""
+    # This would track active iterations
+    # For now, return mock data
+    return {
+        'iteration': 1,
+        'candidates': 3,
+        'in_progress': 1,
+        'completed': 2
+    }
+
+
+def get_learning_timeline():
+    """Get learning metrics over time."""
+    # This would query historical data
+    # For now, return empty
+    return []
+
+
+def get_recent_activity(limit=10):
+    """Get recent activity log."""
+    store = st.session_state.store
+    session = store.get_session()
+    try:
+        recent_runs = session.query(store.Run).order_by(
+            store.Run.created_at.desc()
+        ).limit(limit).all()
+        
+        activities = []
+        for run in recent_runs:
+            factor = store.get_factor(run.factor_id)
+            activities.append({
+                'timestamp': run.created_at.strftime('%Y-%m-%d %H:%M'),
+                'type': 'Run Completed',
+                'description': f"Factor: {factor.name if factor else 'Unknown'}, Status: {run.status}"
+            })
+        
+        return activities
+    finally:
+        session.close()
 
 
 if __name__ == "__main__":

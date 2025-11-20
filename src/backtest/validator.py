@@ -384,18 +384,18 @@ def validate_run(
     
     # Target checks
     targets_config = constraints_config.get('targets', {})
-    if metrics.get('sharpe', 0) < targets_config.get('min_sharpe', 1.0):
+    if metrics.get('sharpe', 0) < targets_config.get('min_sharpe', 1.8):
         issues.append({
             'type': 'below_target_sharpe',
             'severity': 'warning',
-            'detail': f"Sharpe {metrics.get('sharpe', 0):.2f} < {targets_config.get('min_sharpe', 1.0)}"
+            'detail': f"Sharpe {metrics.get('sharpe', 0):.2f} < {targets_config.get('min_sharpe', 1.8)}"
         })
     
-    if abs(metrics.get('maxdd', 0)) > targets_config.get('max_maxdd', 0.35):
+    if abs(metrics.get('maxdd', 0)) > targets_config.get('max_maxdd', 0.25):
         issues.append({
             'type': 'exceeds_max_drawdown',
             'severity': 'error',
-            'detail': f"MaxDD {abs(metrics.get('maxdd', 0)):.2%} > {targets_config.get('max_maxdd', 0.35):.2%}"
+            'detail': f"MaxDD {abs(metrics.get('maxdd', 0)):.2%} > {targets_config.get('max_maxdd', 0.25):.2%}"
         })
     
     if metrics.get('avg_ic', 0) < targets_config.get('min_avg_ic', 0.05):

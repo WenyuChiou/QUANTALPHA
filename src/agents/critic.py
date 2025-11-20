@@ -8,6 +8,7 @@ from langchain.chains import LLMChain
 from ..memory.lessons import LessonManager
 from ..memory.store import ExperimentStore
 from ..tools.write_lesson import write_lesson
+from ..analysis.guidelines import get_analysis_guidelines
 
 
 class CriticAgent:
@@ -27,10 +28,21 @@ class CriticAgent:
         self.llm = Ollama(model=model_name, temperature=0.3)
         self.store = ExperimentStore(db_path)
         self.lesson_manager = LessonManager(self.store)
+        self.guidelines = get_analysis_guidelines()
         
         self.critique_prompt = PromptTemplate(
             input_variables=["metrics", "issues", "factor_yaml"],
             template="""You are a quantitative research critic evaluating a factor backtest.
+
+## IMPORTANT CONTEXT: MOMENTUM FACTORS
+**MOMENTUM FACTORS ARE EXTREMELY IMPORTANT** in quantitative finance. When evaluating factors:
+- Momentum factors have strong empirical support and should be given special consideration
+- If this is a momentum factor, be aware that momentum typically shows:
+  * Sharpe ratios of 1.0-2.0 are common, but **must be >= 1.8 to pass**
+  * IC values of 0.05-0.10 are typical and acceptable
+  * Drawdown must be <= -25% to pass (target: -20% or better)
+- Momentum factors are among the most robust and well-documented factors in academic literature
+- Pay special attention to momentum factors - they are critical for portfolio construction
 
 ## Factor Specification
 ```yaml
@@ -43,14 +55,91 @@ class CriticAgent:
 ## Validation Issues
 {issues}
 
+## ANALYSIS GUIDELINES (MUST FOLLOW)
+
+**Follow these comprehensive analysis guidelines:**
+
+### Performance Metrics (CRITICAL):
+1. **Sharpe Ratio**: Must be >= 1.8
+   - Excellent: >= 2.5
+   - Good: 2.0 - 2.5
+   - Acceptable: 1.8 - 2.0
+   - **FAIL**: < 1.8 → REJECT FACTOR
+
+2. **Maximum Drawdown**: Must be >= -25%
+   - Excellent: >= -15%
+   - Good: -15% to -20%
+   - Acceptable: -20% to -25%
+   - **FAIL**: < -25% → REJECT FACTOR
+
+3. **Information Coefficient (IC)**: Must be >= 0.05
+   - Excellent: >= 0.08
+   - Good: 0.06 - 0.08
+   - Acceptable: 0.05 - 0.06
+   - **WARNING**: < 0.05 (weak predictive power)
+
+4. **Information Ratio (IR)**: Must be >= 0.5
+   - Excellent: >= 0.8
+   - Good: 0.6 - 0.8
+   - Acceptable: 0.5 - 0.6
+   - **WARNING**: < 0.5 (poor risk-adjusted performance)
+
+5. **Hit Rate**: Must be >= 52%
+   - Excellent: >= 56%
+   - Good: 54% - 56%
+   - Acceptable: 52% - 54%
+   - **WARNING**: < 52% (inconsistent performance)
+
+6. **Monthly Turnover**: Must be <= 250%
+   - Excellent: <= 100%
+   - Good: 100% - 150%
+   - Acceptable: 150% - 250%
+   - **WARNING**: > 250% (high transaction costs)
+
+### Stability Analysis (REQUIRED):
+- **Rolling Sharpe Stability**: Std should be < 50% of mean
+- **IC Stability**: IC should not drop below 0.03 in any period
+- **Sharpe Drawdown**: Rolling Sharpe should not drop >50% from peak
+
+### Risk Analysis (REQUIRED):
+- **VaR(95%)**: Should be >= -2%
+- **Tail Ratio**: 95th/5th percentile ratio should be >= 1.0
+- **Drawdown Analysis**: Maximum drawdown and recovery time
+
+### Regime Robustness (REQUIRED):
+- Must perform in at least 3 out of 4 regimes:
+  - Bull market: Sharpe >= 0.5
+  - Bear market: Sharpe >= 0.5
+  - High volatility: Sharpe >= 0.5
+  - Low volatility: Sharpe >= 0.5
+
+### Decay Analysis (REQUIRED):
+- **IC Decay Rate**: Should be < 50%
+- **Performance Persistence**: Check if performance degrades over time
+- **Complexity Assessment**: Factor complexity score
+
+### Sample Quality (REQUIRED):
+- **History**: Must have >= 800 days
+- **Observations**: Must have >= 800 observations
+- **Data Quality**: Check for missing data, outliers, etc.
+
 ## Task
 Analyze this run and determine:
-1. Did it pass validation? (yes/no)
-2. What are the key strengths/weaknesses?
-3. What are the root causes of any failures?
-4. What lessons can be learned?
+1. **Did it pass ALL metrics requirements?** Check each metric against requirements above
+   - **CRITICAL**: Sharpe must be >= 1.8, MaxDD must be >= -25%
+   - If either fails, the factor is REJECTED
+2. **Is this a momentum factor?** If yes, evaluate with momentum-specific benchmarks
+3. **Which metrics passed/failed?** List each metric and its status
+   - Explicitly state: "Sharpe: PASS/FAIL (value vs 1.8 requirement)"
+   - Explicitly state: "MaxDD: PASS/FAIL (value vs -25% requirement)"
+4. What are the key strengths/weaknesses?
+5. What are the root causes of any failures?
+6. What lessons can be learned?
+7. **For momentum factors**: Are the results consistent with momentum literature expectations?
 
-Provide a structured critique.
+**IMPORTANT**: Factors with Sharpe < 1.8 or MaxDD < -25% MUST be rejected.
+
+Provide a structured critique with explicit evaluation of each metric requirement. If this is a momentum factor, note its importance and evaluate accordingly.
 """
         )
     

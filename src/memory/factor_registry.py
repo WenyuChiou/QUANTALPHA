@@ -32,8 +32,8 @@ class ValidationSpec(BaseModel):
 
 class TargetsSpec(BaseModel):
     """Performance targets."""
-    min_sharpe: float = Field(default=1.0)
-    max_maxdd: float = Field(default=0.35)
+    min_sharpe: float = Field(default=1.8)  # Updated requirement: minimum Sharpe 1.8
+    max_maxdd: float = Field(default=0.25)  # Updated requirement: maximum drawdown -25%
     min_avg_ic: float = Field(default=0.05)
 
 

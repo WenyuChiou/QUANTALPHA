@@ -35,8 +35,8 @@ risk_budgets:
   
 # Performance targets (for filtering)
 targets:
-  min_sharpe: 1.0
-  max_maxdd: 0.35  # Maximum 35% drawdown
+  min_sharpe: 1.8  # Minimum Sharpe ratio of 1.8 (increased requirement)
+  max_maxdd: 0.25  # Maximum 25% drawdown (stricter requirement)
   min_avg_ic: 0.05  # Minimum average IC of 0.05
   min_ir: 0.5  # Minimum Information Ratio
   min_hit_rate: 0.52  # Minimum 52% hit rate

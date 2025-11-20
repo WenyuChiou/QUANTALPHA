@@ -26,6 +26,24 @@ class ReporterAgent:
             input_variables=["run_data", "metrics", "issues"],
             template="""Generate a concise summary of this backtest run.
 
+## IMPORTANT: MOMENTUM FACTORS
+**MOMENTUM FACTORS ARE EXTREMELY IMPORTANT** in quantitative finance. If this is a momentum factor:
+- Highlight its importance and significance
+- Compare results to momentum literature benchmarks (Sharpe 1.0-2.0, IC 0.05-0.10)
+- Note that momentum factors are among the most robust factors documented
+- Emphasize the value of momentum factors for portfolio construction
+
+## METRICS REQUIREMENTS EVALUATION
+**EVALUATE EACH METRIC AGAINST REQUIREMENTS:**
+- Sharpe Ratio: Required >= 1.8 (excellent: >= 2.5, good: 2.0-2.5, acceptable: 1.8-2.0, FAIL: < 1.8)
+- Max Drawdown: Required >= -25% (excellent: >= -15%, good: -15% to -20%, acceptable: -20% to -25%, FAIL: < -25%)
+- Average IC: Required >= 0.05 (excellent: >= 0.08, good: 0.06-0.08, acceptable: 0.05-0.06, FAIL: < 0.05)
+- Information Ratio: Required >= 0.5 (excellent: >= 0.8, good: 0.6-0.8, acceptable: 0.5-0.6, FAIL: < 0.5)
+- Hit Rate: Required >= 52% (excellent: >= 56%, good: 54%-56%, acceptable: 52%-54%, FAIL: < 52%)
+- Monthly Turnover: Required <= 250% (excellent: <= 100%, good: 100%-150%, acceptable: 150%-250%, FAIL: > 250%)
+
+**MUST STATE WHETHER EACH METRIC PASSED OR FAILED**
+
 Run Data:
 {run_data}
 
@@ -35,7 +53,11 @@ Metrics:
 Issues:
 {issues}
 
-Provide a 2-3 paragraph summary highlighting key findings.
+Provide a 2-3 paragraph summary highlighting:
+1. **Metrics evaluation**: Which metrics passed/failed requirements
+2. **Performance assessment**: Overall performance relative to requirements
+3. **Key findings**: Important insights from the backtest
+4. **If momentum factor**: Emphasize its importance and significance
 """
         )
     
@@ -138,6 +160,28 @@ Turnover: {metrics.turnover_monthly:.1f}%
             input_variables=["successful", "failed"],
             template="""Based on these results, generate a plan for the next iteration.
 
+## CRITICAL PRIORITY: MOMENTUM FACTORS
+**MOMENTUM FACTORS ARE EXTREMELY IMPORTANT** and should be prioritized:
+- Momentum factors have strong empirical support and robust performance
+- Always consider momentum-based designs first
+- If successful factors include momentum, prioritize mutations of momentum factors
+- If no momentum factors exist, strongly recommend exploring momentum factors
+
+## METRICS REQUIREMENTS (MUST BE MET)
+**ALL FACTORS MUST MEET THESE METRICS:**
+- Sharpe Ratio: >= 1.8 (target: 2.0+) - **CRITICAL: Must be >= 1.8**
+- Max Drawdown: <= -25% (target: -20% or better) - **CRITICAL: Must be <= -25%**
+- Average IC: >= 0.05 (target: 0.06+)
+- Information Ratio: >= 0.5 (target: 0.6+)
+- Hit Rate: >= 52% (target: 54%+)
+- Monthly Turnover: <= 250% (target: <200%)
+
+When recommending mutations or new directions:
+- Ensure they can meet all metrics requirements above
+- Focus on factors that can achieve Sharpe >= 1.2
+- Prioritize designs that maintain IC >= 0.06
+- Consider turnover constraints in design
+
 Successful Factors:
 {successful}
 
@@ -145,9 +189,11 @@ Failed Factors:
 {failed}
 
 Provide:
-1. Recommended mutations to try
-2. New directions to explore
-3. Pitfalls to avoid
+1. **PRIORITIZE MOMENTUM**: Recommended momentum factor mutations to try (must meet metrics requirements)
+2. New directions to explore (with emphasis on momentum if not already explored, must meet metrics)
+3. Pitfalls to avoid (especially metrics failures)
+4. **Metrics-focused improvements**: How to improve factors that failed metrics requirements
+5. **Emphasize the importance of momentum factors** in the plan
 """
         )
         

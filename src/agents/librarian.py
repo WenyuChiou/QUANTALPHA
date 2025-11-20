@@ -63,7 +63,8 @@ class LibrarianAgent:
         query: str,
         filters: Optional[Dict[str, Any]] = None,
         regime: Optional[str] = None,
-        n_results: int = 5
+        n_results: int = 5,
+        prioritize_momentum: bool = True
     ) -> List[Dict[str, Any]]:
         """Search knowledge base.
         
@@ -72,11 +73,34 @@ class LibrarianAgent:
             filters: Metadata filters
             regime: Regime filter
             n_results: Number of results
+            prioritize_momentum: If True, prioritize momentum-related results
         
         Returns:
-            List of search results
+            List of search results (momentum factors prioritized if prioritize_momentum=True)
         """
-        return self.retriever.search(query, n_results, filters, regime)
+        # If prioritizing momentum and query doesn't explicitly mention it, enhance query
+        if prioritize_momentum and "momentum" not in query.lower():
+            # Search for momentum-related content first
+            momentum_query = f"{query} momentum factor time series momentum TSMOM"
+            momentum_results = self.retriever.search(momentum_query, n_results=min(3, n_results), filters=filters, regime=regime)
+            
+            # Also search original query
+            general_results = self.retriever.search(query, n_results=n_results, filters=filters, regime=regime)
+            
+            # Combine with momentum results first
+            combined = momentum_results + general_results
+            # Remove duplicates while preserving order
+            seen = set()
+            unique_results = []
+            for r in combined:
+                r_id = r.get('id') or r.get('text', '')[:100]
+                if r_id not in seen:
+                    seen.add(r_id)
+                    unique_results.append(r)
+            
+            return unique_results[:n_results]
+        else:
+            return self.retriever.search(query, n_results, filters, regime)
     
     def tag_run_by_regime(
         self,
@@ -98,7 +122,7 @@ class LibrarianAgent:
         finally:
             session.close()
     
-    def curate_successful_factors(self, min_sharpe: float = 1.5) -> List[Dict[str, Any]]:
+    def curate_successful_factors(self, min_sharpe: float = 1.8) -> List[Dict[str, Any]]:
         """Curate successful factors from database.
         
         Args:

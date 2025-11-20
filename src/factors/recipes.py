@@ -36,8 +36,8 @@ def get_tsmom_factor() -> FactorSpec:
             max_turnover_monthly=250.0
         ),
         targets=TargetsSpec(
-            min_sharpe=1.0,
-            max_maxdd=0.35,
+            min_sharpe=1.8,  # Updated requirement: minimum Sharpe 1.8
+            max_maxdd=0.25,  # Updated requirement: maximum drawdown -25%
             min_avg_ic=0.05
         )
     )
@@ -67,8 +67,8 @@ def get_low_vol_factor() -> FactorSpec:
             max_turnover_monthly=200.0
         ),
         targets=TargetsSpec(
-            min_sharpe=1.0,
-            max_maxdd=0.30,
+            min_sharpe=1.8,  # Updated requirement: minimum Sharpe 1.8
+            max_maxdd=0.25,  # Updated requirement: maximum drawdown -25%
             min_avg_ic=0.04
         )
     )
@@ -108,8 +108,8 @@ def get_vol_scaled_momentum_factor() -> FactorSpec:
             max_turnover_monthly=250.0
         ),
         targets=TargetsSpec(
-            min_sharpe=1.2,
-            max_maxdd=0.35,
+            min_sharpe=1.8,  # Updated requirement: minimum Sharpe 1.8
+            max_maxdd=0.25,  # Updated requirement: maximum drawdown -25%
             min_avg_ic=0.06
         )
     )

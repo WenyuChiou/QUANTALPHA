@@ -57,6 +57,7 @@ Thumbs.db
 
 # Logs
 *.log
+logs/
 
 # Jupyter
 .ipynb_checkpoints/
@@ -65,4 +66,35 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# Test databases
+test_*.db
+*_test.db
+
+# Backup directories
+backups/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Temporary scripts (should not be committed)
+push.bat
+temp_*.py
+test_*.py
+!tests/**/*.py
+!scripts/**/*.py
 
