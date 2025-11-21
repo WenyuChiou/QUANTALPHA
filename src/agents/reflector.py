@@ -98,6 +98,42 @@ class ReflectorAgent:
         
         return lessons
     
+    def analyze_failure(
+        self,
+        alpha_id: str,
+        metrics: Dict[str, Any],
+        compliance: Dict[str, Any],
+        signals_meta: Optional[Dict[str, Any]] = None,
+        factor_yaml: Optional[str] = None,
+        past_lessons: Optional[List[Dict[str, Any]]] = None
+    ) -> Dict[str, Any]:
+        """Analyze a failed alpha (alias for analyze method).
+        
+        Args:
+            alpha_id: Alpha identifier
+            metrics: Performance metrics
+            compliance: Compliance report
+            signals_meta: Signal metadata (optional)
+            factor_yaml: Factor YAML (optional)
+            past_lessons: Previous lessons (optional)
+        
+        Returns:
+            Lessons dictionary
+        """
+        # Use empty dict if signals_meta not provided
+        if signals_meta is None:
+            signals_meta = {}
+        
+        return self.analyze(
+            alpha_id=alpha_id,
+            metrics=metrics,
+            compliance=compliance,
+            signals_meta=signals_meta,
+            factor_yaml=factor_yaml,
+            past_lessons=past_lessons
+        )
+    
+
     def _analyze_root_causes(
         self,
         metrics: Dict[str, Any],

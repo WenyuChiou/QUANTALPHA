@@ -1,0 +1,35 @@
+name: "momentum_vol_adjusted_20y"
+description: "20-day momentum adjusted by 60-day volatility with regime awareness"
+universe: "sp500"
+frequency: "D"
+lookback_days: 252
+
+signals:
+  - id: "mom_20"
+    expr: "RET_20"
+    standardize: "zscore_252"
+    description: "20-day momentum signal"
+  
+  - id: "vol_60"
+    expr: "ROLL_STD(RET_D, 60)"
+    standardize: "zscore_252"
+    description: "60-day volatility"
+  
+  - id: "mom_vol_ratio"
+    expr: "RET_20 / (ROLL_STD(RET_D, 60) + 0.01)"
+    standardize: "zscore_252"
+    description: "Momentum-to-volatility ratio"
+
+portfolio:
+  scheme: "long_short_deciles"
+  weight: "equal"
+  rebalance: "W-FRI"
+  costs:
+    bps_per_trade: 5
+    borrow_bps: 50
+
+metadata:
+  category: "momentum"
+  research_basis: "Jegadeesh & Titman (1993), enhanced with volatility adjustment"
+  target_sharpe: 1.8
+  target_maxdd: -0.25

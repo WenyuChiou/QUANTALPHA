@@ -1,0 +1,25 @@
+{
+  "iteration": 1,
+  "alpha_id": "alpha_001",
+  "verdict": "FAIL",
+  "root_causes": [
+    {
+      "issue": "high_drawdown",
+      "detail": "Max drawdown -24.00% exceeds -20%",
+      "analysis": "Factor experiences large losses during adverse periods",
+      "recommendation": "Implement position sizing, stop-loss, or volatility targeting"
+    }
+  ],
+  "improvement_suggestions": [
+    "Implement position sizing, stop-loss, or volatility targeting"
+  ],
+  "applicable_rules": [
+    "R004",
+    "R007"
+  ],
+  "constraint_violations": [
+    "Sharpe 1.05 < 1.8"
+  ],
+  "lesson_id": 6214,
+  "created_at": "2025-11-21T01:42:30.339366"
+}

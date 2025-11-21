@@ -57,6 +57,88 @@ python scripts/test_agent_integration.py
 python scripts/validate_schemas.py test_results
 ```
 
+## 🎯 示例 Alpha：20 年動量策略
+
+### 性能亮點
+
+![權益曲線](success_factors/alpha_showcase_20251121_075252/charts/equity_curve_3panel.png)
+
+| 指標 | 數值 |
+|------|------|
+| **Sharpe 比率** | 1.00 |
+| **年化收益** | 28.88% |
+| **最大回撤** | -14.46% |
+| **回測期間** | 2004-2024（20 年）|
+
+[查看完整 Alpha 詳情 →](success_factors/alpha_showcase_20251121_075252/README.md)
+
+---
+
+## 📊 資訊流
+
+### Phase 11：迭代式 Alpha 發現
+
+```mermaid
+graph TD
+    A[開始發現循環] --> B[ResearcherAgent]
+    B -->|因子提案| C[FeatureAgent]
+    C -->|信號| D[BacktesterAgent]
+    D -->|指標| E[CriticAgent]
+    E -->|合規性| F{達到目標?}
+    F -->|否| G[ReflectorAgent]
+    G -->|經驗教訓| H[PolicyManager]
+    H -->|更新規則| B
+    F -->|是| I[歸檔 Alpha]
+    I --> J[成功!]
+    
+    style A fill:#e1f5ff
+    style J fill:#d4edda
+    style F fill:#fff3cd
+    style G fill:#f8d7da
+```
+
+### Agent 工作流程
+
+1. **ResearcherAgent** 🔬
+   - 基於研究提出因子想法
+   - 應用政策規則和過往經驗
+   - 輸出：`factor_proposals.json`
+
+2. **FeatureAgent** ⚙️
+   - 從因子規範計算信號
+   - 驗證信號質量
+   - 輸出：`signals_meta.json`
+
+3. **BacktesterAgent** 📊
+   - 運行 20 年 walk-forward 回測
+   - 計算 13+ 個性能指標
+   - 生成 3-panel 權益曲線
+   - 輸出：`metrics.json`, `charts/equity_curve_3panel.png`
+
+4. **CriticAgent** 🔍
+   - 評估是否符合目標
+   - 識別問題和風險
+   - 輸出：`compliance.json`
+
+5. **ReflectorAgent** 💡 (Gemini 1.5 Pro)
+   - 分析失敗和成功
+   - 生成改進建議
+   - 輸出：`lessons.json`
+
+6. **PolicyManager** 📋
+   - 應用 12 個基於研究的規則
+   - 執行約束條件（Sharpe ≥ 1.8, MaxDD ≥ -25%）
+   - 指導下一次迭代
+
+### 目標指標（Phase 11）
+
+- **Sharpe 比率**：≥ 1.8（機構標準）
+- **最大回撤**：≥ -25%（Calmar 比率最佳實踐）
+- **月換手率**：< 100%（交易成本效率）
+- **平均 IC**：≥ 0.05（信號質量）
+
+---
+
 ### 示例：定義和測試因子
 
 ```yaml
@@ -168,11 +250,14 @@ make validate-schemas
 - [x] Manifest 生成器（SHA256 checksums）
 - [x] CI 集成
 
-### 🚧 進行中（Phase 11）
+### ✅ 已完成（Phase 11）
 
-- [ ] Reflection loop 和 policy rules
-- [ ] 經驗管理系統
-- [ ] 增強的 agent 編排
+- [x] Reflection loop 和 policy rules
+- [x] ReflectorAgent（Gemini API）
+- [x] 12 個基於研究的 policy rules（2021+ AI）
+- [x] 迭代式 alpha 發現
+- [x] Alpha 編號系統（alpha_001, alpha_002, ...）
+- [x] 整合測試（100% 通過）
 
 ### 📋 計劃中（Phase 12-15）
 

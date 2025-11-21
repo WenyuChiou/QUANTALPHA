@@ -1,0 +1,11 @@
+{
+  "test_type": "minimal_integration",
+  "max_iterations": 3,
+  "timestamp": "20251121_014138",
+  "output_dir": "test_results\\integration_tests\\minimal_20251121_014138",
+  "iterations": [],
+  "status": "FAILED",
+  "error": "'ReflectorAgent' object has no attribute 'analyze_failure'",
+  "total_runtime_seconds": 1.8,
+  "total_runtime_minutes": 0.03
+}

@@ -57,6 +57,88 @@ python scripts/test_agent_integration.py
 python scripts/validate_schemas.py test_results
 ```
 
+## 🎯 Showcase Alpha: 20-Year Momentum Strategy
+
+### Performance Highlights
+
+![Equity Curve](success_factors/alpha_showcase_20251121_075252/charts/equity_curve_3panel.png)
+
+| Metric | Value |
+|--------|-------|
+| **Sharpe Ratio** | 1.00 |
+| **Annual Return** | 28.88% |
+| **Max Drawdown** | -14.46% |
+| **Backtest Period** | 2004-2024 (20 years) |
+
+[View Full Alpha Details →](success_factors/alpha_showcase_20251121_075252/README.md)
+
+---
+
+## 📊 Information Flow
+
+### Phase 11: Iterative Alpha Discovery
+
+```mermaid
+graph TD
+    A[Start Discovery Loop] --> B[ResearcherAgent]
+    B -->|Factor Proposals| C[FeatureAgent]
+    C -->|Signals| D[BacktesterAgent]
+    D -->|Metrics| E[CriticAgent]
+    E -->|Compliance| F{Meets Targets?}
+    F -->|No| G[ReflectorAgent]
+    G -->|Lessons Learned| H[PolicyManager]
+    H -->|Updated Rules| B
+    F -->|Yes| I[Archive Alpha]
+    I --> J[Success!]
+    
+    style A fill:#e1f5ff
+    style J fill:#d4edda
+    style F fill:#fff3cd
+    style G fill:#f8d7da
+```
+
+### Agent Workflow
+
+1. **ResearcherAgent** 🔬
+   - Proposes factor ideas based on research
+   - Applies policy rules and past lessons
+   - Output: `factor_proposals.json`
+
+2. **FeatureAgent** ⚙️
+   - Computes signals from factor specifications
+   - Validates signal quality
+   - Output: `signals_meta.json`
+
+3. **BacktesterAgent** 📊
+   - Runs 20-year walk-forward backtest
+   - Calculates 13+ performance metrics
+   - Generates 3-panel equity curves
+   - Output: `metrics.json`, `charts/equity_curve_3panel.png`
+
+4. **CriticAgent** 🔍
+   - Evaluates compliance with targets
+   - Identifies issues and risks
+   - Output: `compliance.json`
+
+5. **ReflectorAgent** 💡 (Gemini 1.5 Pro)
+   - Analyzes failures and successes
+   - Generates improvement suggestions
+   - Output: `lessons.json`
+
+6. **PolicyManager** 📋
+   - Applies 12 research-based rules
+   - Enforces constraints (Sharpe ≥ 1.8, MaxDD ≥ -25%)
+   - Guides next iteration
+
+### Target Metrics (Phase 11)
+
+- **Sharpe Ratio**: ≥ 1.8 (institutional standard)
+- **Max Drawdown**: ≥ -25% (Calmar ratio best practice)
+- **Monthly Turnover**: < 100% (transaction cost efficiency)
+- **Average IC**: ≥ 0.05 (signal quality)
+
+---
+
 ### Example: Define and Test a Factor
 
 ```yaml
@@ -168,11 +250,14 @@ make validate-schemas
 - [x] Manifest generator with SHA256 checksums
 - [x] CI integration
 
-### 🚧 In Progress (Phase 11)
+### ✅ Complete (Phase 11)
 
-- [ ] Reflection loop and policy rules
-- [ ] Lesson management system
-- [ ] Enhanced agent orchestration
+- [x] Reflection loop and policy rules
+- [x] ReflectorAgent with Gemini API
+- [x] 12 research-based policy rules (2021+ AI)
+- [x] Iterative alpha discovery
+- [x] Alpha numbering system (alpha_001, alpha_002, ...)
+- [x] Integration tests (100% passing)
 
 ### 📋 Planned (Phases 12-15)
 

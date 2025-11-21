@@ -1,0 +1,141 @@
+{
+  "test_type": "minimal_integration",
+  "max_iterations": 3,
+  "timestamp": "20251121_014216",
+  "output_dir": "test_results\\integration_tests\\minimal_20251121_014216",
+  "iterations": [
+    {
+      "iteration": 1,
+      "alpha_id": "alpha_001",
+      "runtime_seconds": 13.73,
+      "metrics": {
+        "sharpe": 1.05,
+        "maxdd": -0.24,
+        "ann_ret": 0.2,
+        "turnover_monthly": 67,
+        "avg_ic": 0.07,
+        "hit_rate": 0.53,
+        "ic_std": 0.16,
+        "skew": -0.45
+      },
+      "compliance": {
+        "verdict": "FAIL",
+        "applicable_rules": [
+          "R004",
+          "R006",
+          "R007"
+        ],
+        "violations": [
+          "Sharpe 1.05 < 1.8"
+        ],
+        "issues": []
+      },
+      "lessons": {
+        "iteration": 1,
+        "alpha_id": "alpha_001",
+        "verdict": "FAIL",
+        "root_causes": [
+          {
+            "issue": "high_drawdown",
+            "detail": "Max drawdown -24.00% exceeds -20%",
+            "analysis": "Factor experiences large losses during adverse periods",
+            "recommendation": "Implement position sizing, stop-loss, or volatility targeting"
+          }
+        ],
+        "improvement_suggestions": [
+          "Implement position sizing, stop-loss, or volatility targeting"
+        ],
+        "applicable_rules": [
+          "R004",
+          "R007"
+        ],
+        "constraint_violations": [
+          "Sharpe 1.05 < 1.8"
+        ],
+        "lesson_id": 6214,
+        "created_at": "2025-11-21T01:42:30.339366"
+      },
+      "status": "FAIL",
+      "meets_sharpe": false,
+      "meets_drawdown": true
+    },
+    {
+      "iteration": 2,
+      "alpha_id": "alpha_002",
+      "runtime_seconds": 14.03,
+      "metrics": {
+        "sharpe": 1.5,
+        "maxdd": -0.2,
+        "ann_ret": 0.28,
+        "turnover_monthly": 59,
+        "avg_ic": 0.095,
+        "hit_rate": 0.56,
+        "ic_std": 0.14,
+        "skew": -0.3
+      },
+      "compliance": {
+        "verdict": "FAIL",
+        "applicable_rules": [
+          "R004",
+          "R006"
+        ],
+        "violations": [
+          "Sharpe 1.50 < 1.8"
+        ],
+        "issues": []
+      },
+      "lessons": {
+        "iteration": 2,
+        "alpha_id": "alpha_002",
+        "verdict": "FAIL",
+        "root_causes": [],
+        "improvement_suggestions": [],
+        "applicable_rules": [
+          "R004"
+        ],
+        "constraint_violations": [
+          "Sharpe 1.50 < 1.8"
+        ],
+        "lesson_id": 6811,
+        "created_at": "2025-11-21T01:42:44.374095"
+      },
+      "status": "FAIL",
+      "meets_sharpe": false,
+      "meets_drawdown": true
+    },
+    {
+      "iteration": 3,
+      "alpha_id": "alpha_003",
+      "runtime_seconds": 1.8,
+      "metrics": {
+        "sharpe": 1.95,
+        "maxdd": -0.16,
+        "ann_ret": 0.36,
+        "turnover_monthly": 51,
+        "avg_ic": 0.12,
+        "hit_rate": 0.59,
+        "ic_std": 0.12,
+        "skew": -0.15
+      },
+      "compliance": {
+        "verdict": "PASS",
+        "applicable_rules": [
+          "R006"
+        ],
+        "violations": [],
+        "issues": []
+      },
+      "lessons": {
+        "verdict": "PASS",
+        "message": "Target metrics achieved!"
+      },
+      "status": "PASS",
+      "meets_sharpe": true,
+      "meets_drawdown": true
+    }
+  ],
+  "status": "SUCCESS",
+  "success_iteration": 3,
+  "total_runtime_seconds": 29.57,
+  "total_runtime_minutes": 0.49
+}
