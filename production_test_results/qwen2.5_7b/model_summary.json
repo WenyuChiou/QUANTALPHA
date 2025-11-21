@@ -1,0 +1,59 @@
+{
+  "model": "qwen2.5:7b",
+  "iterations": 10,
+  "successful": 10,
+  "failed": 0,
+  "results": [
+    {
+      "iteration": 1,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.001455783843994
+    },
+    {
+      "iteration": 2,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.000833511352539
+    },
+    {
+      "iteration": 3,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.001112461090088
+    },
+    {
+      "iteration": 4,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0013785362243652
+    },
+    {
+      "iteration": 5,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.001340866088867
+    },
+    {
+      "iteration": 6,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0005927085876465
+    },
+    {
+      "iteration": 7,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0014874935150146
+    },
+    {
+      "iteration": 8,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0012547969818115
+    },
+    {
+      "iteration": 9,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0013535022735596
+    },
+    {
+      "iteration": 10,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.001790761947632
+    }
+  ],
+  "success_rate": 1.0
+}

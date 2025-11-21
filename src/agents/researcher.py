@@ -61,10 +61,59 @@ class ResearcherAgent:
         self.lesson_manager = LessonManager(self.store)
         self.index_path = index_path
         
-    def propose_factor(self, market_regime: str, existing_factors: list) -> AgentResult:
-        """Propose a new alpha factor based on market regime."""
+    def propose_factor(
+        self,
+        market_regime: str,
+        existing_factors: list,
+        policy_rules: Optional[Dict[str, Any]] = None,
+        past_lessons: Optional[List[Dict[str, Any]]] = None
+    ) -> AgentResult:
+        """Propose a new alpha factor based on market regime and past lessons.
+        
+        Args:
+            market_regime: Current market regime
+            existing_factors: List of existing factor names to avoid
+            policy_rules: Policy rules from PolicyManager
+            past_lessons: List of lessons learned from past failures
+        
+        Returns:
+            AgentResult with factor proposal
+        """
         try:
-            # Mock response for demonstration
+            # Build enhanced prompt with policy rules and lessons
+            prompt_parts = []
+            
+            # Add policy requirements
+            if policy_rules:
+                constraints = policy_rules.get('global_constraints', {})
+                prompt_parts.append(f"""
+## Policy Requirements:
+- Target Sharpe Ratio: ≥ {constraints.get('min_sharpe', 1.8)}
+- Max Drawdown: ≥ {constraints.get('max_maxdd', -0.25):.0%}
+- Information Coefficient: ≥ {constraints.get('min_avg_ic', 0.05)}
+- Monthly Turnover: ≤ {constraints.get('max_turnover_monthly', 100)}%
+
+## Signal Requirements (R013):
+- Signal MUST have time variation (std > 0.01)
+- Signal MUST have cross-sectional dispersion (std > 0.1)
+- ALWAYS use .rank(axis=1, pct=True) for cross-sectional ranking
+""")
+            
+            # Add past lessons if available
+            if past_lessons and len(past_lessons) > 0:
+                lessons_text = self._format_lessons(past_lessons)
+                prompt_parts.append(f"""
+## Past Lessons Learned:
+{lessons_text}
+
+⚠️ IMPORTANT: Please avoid repeating the mistakes identified above.
+""")
+            
+            # Log what we're using
+            if past_lessons:
+                print(f"  📚 Using {len(past_lessons)} past lessons to guide proposal")
+            
+            # Mock response for demonstration (in real implementation, use LLM with prompt)
             factor_yaml = """
 name: nonlinear_momentum_demo
 universe: test_universe
@@ -101,7 +150,9 @@ portfolio:
                 ),
                 metadata={
                     "model": "mock-llm",
-                    "market_regime": market_regime
+                    "market_regime": market_regime,
+                    "used_lessons": len(past_lessons) if past_lessons else 0,
+                    "has_policy_rules": policy_rules is not None
                 }
             )
             
@@ -115,3 +166,45 @@ portfolio:
                     data={"error": str(e)}
                 )
             )
+    
+    def _format_lessons(self, past_lessons: List[Dict[str, Any]]) -> str:
+        """Format past lessons into readable text for prompt.
+        
+        Args:
+            past_lessons: List of lesson dictionaries from ReflectorAgent
+        
+        Returns:
+            Formatted lessons text
+        """
+        if not past_lessons:
+            return "No past lessons available."
+        
+        formatted = []
+        
+        # Show most recent lessons first (up to 5)
+        recent_lessons = past_lessons[-5:]
+        
+        for i, lesson in enumerate(reversed(recent_lessons), 1):
+            alpha_id = lesson.get('alpha_id', 'unknown')
+            verdict = lesson.get('verdict', 'FAIL')
+            
+            formatted.append(f"\n### Lesson {i} (from {alpha_id}, {verdict}):")
+            
+            # Root causes
+            root_causes = lesson.get('root_causes', [])
+            if root_causes:
+                formatted.append("\n**Problems Identified:**")
+                for cause in root_causes[:3]:  # Top 3 causes
+                    issue = cause.get('issue', 'unknown')
+                    detail = cause.get('detail', '')
+                    formatted.append(f"  - {issue}: {detail}")
+            
+            # Improvement suggestions
+            improvements = lesson.get('improvement_suggestions', [])
+            if improvements:
+                formatted.append("\n**Suggested Improvements:**")
+                for imp in improvements[:3]:  # Top 3 suggestions
+                    suggestion = imp.get('suggestion', '')
+                    formatted.append(f"  - {suggestion}")
+        
+        return "\n".join(formatted)

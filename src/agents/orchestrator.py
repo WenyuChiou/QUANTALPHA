@@ -375,7 +375,7 @@ class Orchestrator:
         
         # Get limits from policy rules
         if max_iterations is None:
-            max_iterations = self.policy_manager.get_max_iterations()
+            max_iterations = 10  # Changed from 15 to 10 as per user request
         if target_sharpe is None:
             target_sharpe = self.policy_manager.rules['global_constraints']['min_sharpe']
         
@@ -401,7 +401,8 @@ class Orchestrator:
                 result = self.researcher.propose_factor(
                     market_regime="unknown",
                     existing_factors=[],
-                    # TODO: Pass policy_rules and past_lessons to researcher
+                    policy_rules=self.policy_manager.rules,  # Pass policy rules
+                    past_lessons=past_lessons                 # Pass past lessons
                 )
                 
                 if result.status != "SUCCESS":
@@ -516,8 +517,24 @@ class Orchestrator:
                 
                 past_lessons.append(lessons)
                 
+                # Display detailed reflection results
                 print(f"  ✓ Lessons generated")
-                print(f"    Root causes: {len(lessons['root_causes'])}")
+                print(f"\n  📋 Reflection Summary:")
+                print(f"     Verdict: {lessons['verdict']}")
+                print(f"     Root Causes: {len(lessons['root_causes'])}")
+                
+                # Show top 3 root causes
+                for i, cause in enumerate(lessons['root_causes'][:3], 1):
+                    print(f"       {i}. {cause['issue']}: {cause['detail']}")
+                
+                print(f"\n     Improvement Suggestions: {len(lessons['improvement_suggestions'])}")
+                
+                # Show top 3 suggestions
+                for i, imp in enumerate(lessons['improvement_suggestions'][:3], 1):
+                    priority = imp.get('priority', 'normal')
+                    suggestion = imp.get('suggestion', '')
+                    print(f"       {i}. [{priority.upper()}] {suggestion[:80]}...")
+                
                 print(f"    Suggestions: {len(lessons['improvement_suggestions'])}")
                 
                 # Save lessons

@@ -1,0 +1,31 @@
+{
+  "data_source": "yfinance",
+  "is_real_data": true,
+  "total_days": 1006,
+  "total_stocks": 20,
+  "tickers": [
+    "AAPL",
+    "ABBV",
+    "AMZN",
+    "AVGO",
+    "COST",
+    "CVX",
+    "GOOGL",
+    "HD",
+    "JPM",
+    "KO",
+    "MA",
+    "META",
+    "MRK",
+    "MSFT",
+    "NVDA",
+    "PEP",
+    "PG",
+    "TSLA",
+    "V",
+    "WMT"
+  ],
+  "download_timestamp": "2025-11-21T15:30:14.995935",
+  "start_date": "2020-01-02",
+  "end_date": "2023-12-29"
+}

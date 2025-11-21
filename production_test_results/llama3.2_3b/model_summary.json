@@ -1,0 +1,59 @@
+{
+  "model": "llama3.2:3b",
+  "iterations": 10,
+  "successful": 10,
+  "failed": 0,
+  "results": [
+    {
+      "iteration": 1,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.001359224319458
+    },
+    {
+      "iteration": 2,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0012893676757812
+    },
+    {
+      "iteration": 3,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.003328800201416
+    },
+    {
+      "iteration": 4,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0008411407470703
+    },
+    {
+      "iteration": 5,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0014429092407227
+    },
+    {
+      "iteration": 6,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.000933885574341
+    },
+    {
+      "iteration": 7,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0010344982147217
+    },
+    {
+      "iteration": 8,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0010416507720947
+    },
+    {
+      "iteration": 9,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.000943422317505
+    },
+    {
+      "iteration": 10,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0006439685821533
+    }
+  ],
+  "success_rate": 1.0
+}

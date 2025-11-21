@@ -1,0 +1,59 @@
+{
+  "model": "gemma2:9b",
+  "iterations": 10,
+  "successful": 10,
+  "failed": 0,
+  "results": [
+    {
+      "iteration": 1,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0016098022460938
+    },
+    {
+      "iteration": 2,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0012149810791016
+    },
+    {
+      "iteration": 3,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0009756088256836
+    },
+    {
+      "iteration": 4,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.001161813735962
+    },
+    {
+      "iteration": 5,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.001325845718384
+    },
+    {
+      "iteration": 6,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.001204252243042
+    },
+    {
+      "iteration": 7,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.001460075378418
+    },
+    {
+      "iteration": 8,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0005123615264893
+    },
+    {
+      "iteration": 9,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0011839866638184
+    },
+    {
+      "iteration": 10,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0010013580322266
+    }
+  ],
+  "success_rate": 1.0
+}

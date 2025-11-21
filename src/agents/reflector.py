@@ -237,28 +237,68 @@ class ReflectorAgent:
         root_causes: List[Dict[str, Any]],
         metrics: Dict[str, Any],
         past_lessons: Optional[List[Dict[str, Any]]] = None
-    ) -> List[str]:
+    ) -> List[Dict[str, Any]]:
         """Generate improvement suggestions using Gemini.
         
         Returns:
-            List of improvement suggestions
+            List of improvement suggestion dictionaries with priority
         """
         # Collect all recommendations from root causes
         suggestions = []
         for cause in root_causes:
             rec = cause.get('recommendation', '')
-            if rec and rec not in suggestions:
-                suggestions.append(rec)
+            if rec:
+                suggestions.append({
+                    'suggestion': rec,
+                    'priority': 'normal',
+                    'source': 'root_cause'
+                })
+        
+        # Detect repeated errors
+        if past_lessons and len(past_lessons) >= 2:
+            repeated_issues = self._detect_repeated_issues(past_lessons, root_causes)
+            
+            if repeated_issues:
+                print(f"\n  ⚠️ REPEATED ERRORS DETECTED: {len(repeated_issues)} issues")
+                for issue in repeated_issues:
+                    print(f"     - {issue['issue']} (seen {issue['count']} times)")
+                
+                # Add high-priority suggestions for repeated issues
+                suggestions.append({
+                    'suggestion': f"⚠️ CRITICAL: {len(repeated_issues)} repeated errors detected. Consider a fundamentally different approach.",
+                    'priority': 'critical',
+                    'source': 'repeated_error_detection'
+                })
+                
+                # Suggest alternative factor families
+                if any('sharpe' in issue['issue'].lower() or 'ic' in issue['issue'].lower() for issue in repeated_issues):
+                    suggestions.append({
+                        'suggestion': "Try a completely different factor family (e.g., if using momentum, switch to value or quality)",
+                        'priority': 'high',
+                        'source': 'repeated_error_detection'
+                    })
         
         # Add context-specific suggestions
         if metrics.get('sharpe', 0) < 0.5:
-            suggestions.append("Consider a completely different factor family (e.g., value, quality)")
+            suggestions.append({
+                'suggestion': "Consider a completely different factor family (e.g., value, quality, low volatility)",
+                'priority': 'high',
+                'source': 'low_sharpe'
+            })
         
         if metrics.get('avg_ic', 0) < 0.03:
-            suggestions.append("Current signal has very weak predictive power - try combining with other signals")
+            suggestions.append({
+                'suggestion': "Current signal has very weak predictive power - try combining with other signals or use ensemble approach",
+                'priority': 'high',
+                'source': 'low_ic'
+            })
         
         if metrics.get('turnover_monthly', 0) > 150:
-            suggestions.append("Change rebalance frequency from daily to weekly or monthly")
+            suggestions.append({
+                'suggestion': "Change rebalance frequency from daily to weekly or monthly to reduce turnover",
+                'priority': 'normal',
+                'source': 'high_turnover'
+            })
         
         # Use Gemini for advanced suggestions (if available)
         if self.model and GEMINI_AVAILABLE:
@@ -268,11 +308,56 @@ class ReflectorAgent:
                 
                 # Parse Gemini suggestions
                 gemini_suggestions = self._parse_gemini_response(response.text)
-                suggestions.extend(gemini_suggestions)
+                for sug in gemini_suggestions:
+                    suggestions.append({
+                        'suggestion': sug,
+                        'priority': 'normal',
+                        'source': 'gemini'
+                    })
             except Exception as e:
                 print(f"Warning: Gemini API call failed: {e}")
         
+        # Sort by priority and return top 5
+        priority_order = {'critical': 0, 'high': 1, 'normal': 2}
+        suggestions.sort(key=lambda x: priority_order.get(x.get('priority', 'normal'), 2))
+        
         return suggestions[:5]  # Return top 5 suggestions
+    
+    def _detect_repeated_issues(
+        self,
+        past_lessons: List[Dict[str, Any]],
+        current_causes: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Detect issues that have appeared multiple times.
+        
+        Args:
+            past_lessons: Previous lessons learned
+            current_causes: Current root causes
+        
+        Returns:
+            List of repeated issues with count
+        """
+        # Track issue occurrences
+        issue_counts = {}
+        
+        # Count issues from past lessons
+        for lesson in past_lessons[-5:]:  # Look at last 5 lessons
+            for cause in lesson.get('root_causes', []):
+                issue = cause.get('issue', 'unknown')
+                issue_counts[issue] = issue_counts.get(issue, 0) + 1
+        
+        # Check current causes against past
+        repeated = []
+        for cause in current_causes:
+            issue = cause.get('issue', 'unknown')
+            if issue in issue_counts and issue_counts[issue] >= 2:
+                repeated.append({
+                    'issue': issue,
+                    'count': issue_counts[issue] + 1,  # +1 for current occurrence
+                    'detail': cause.get('detail', '')
+                })
+        
+        return repeated
     
     def _create_improvement_prompt(
         self,

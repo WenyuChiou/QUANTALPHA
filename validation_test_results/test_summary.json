@@ -1,0 +1,10 @@
+{
+  "test_date": "2025-11-21T15:30:24.385899",
+  "model": "gemma2:9b",
+  "data_source": "yfinance",
+  "is_real_data": true,
+  "tickers": 20,
+  "trading_days": 1006,
+  "model_test": "passed",
+  "status": "ready_for_production"
+}

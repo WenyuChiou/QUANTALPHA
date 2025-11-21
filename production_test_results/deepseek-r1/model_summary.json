@@ -1,0 +1,59 @@
+{
+  "model": "deepseek-r1",
+  "iterations": 10,
+  "successful": 10,
+  "failed": 0,
+  "results": [
+    {
+      "iteration": 1,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0009851455688477
+    },
+    {
+      "iteration": 2,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.001241445541382
+    },
+    {
+      "iteration": 3,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.001128911972046
+    },
+    {
+      "iteration": 4,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.000549554824829
+    },
+    {
+      "iteration": 5,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.000993251800537
+    },
+    {
+      "iteration": 6,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.001436233520508
+    },
+    {
+      "iteration": 7,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0015015602111816
+    },
+    {
+      "iteration": 8,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0014660358428955
+    },
+    {
+      "iteration": 9,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0011110305786133
+    },
+    {
+      "iteration": 10,
+      "status": "SUCCESS",
+      "elapsed_seconds": 3.0009264945983887
+    }
+  ],
+  "success_rate": 1.0
+}
