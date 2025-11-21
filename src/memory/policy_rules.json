@@ -1,0 +1,121 @@
+```
+{
+    "version": "2.0",
+    "updated_at": "2025-11-21T01:13:00",
+    "description": "Research-based policy rules for alpha discovery, updated with stricter standards",
+    "rules": [
+        {
+            "rule_id": "R001",
+            "category": "signal_quality",
+            "condition": "avg_ic < 0.05",
+            "action": "Add more signals or improve signal construction. Research shows IC > 0.05 is minimum for viable factors.",
+            "priority": "high",
+            "research_basis": "Grinold & Kahn (2000): IC of 0.05-0.10 typical for good factors",
+            "learned_from": []
+        },
+        {
+            "rule_id": "R002",
+            "category": "risk_management",
+            "condition": "maxdd < -0.25",
+            "action": "Implement position sizing, volatility targeting, or regime-aware risk management",
+            "priority": "critical",
+            "research_basis": "Drawdown < -25% indicates insufficient risk control (Calmar ratio best practice)",
+            "learned_from": []
+        },
+        {
+            "rule_id": "R003",
+            "category": "transaction_costs",
+            "condition": "turnover_monthly > 100",
+            "action": "Reduce rebalance frequency to weekly/monthly. High turnover erodes alpha.",
+            "priority": "high",
+            "research_basis": "Frazzini et al. (2018): Transaction costs can eliminate 50%+ of gross alpha",
+            "learned_from": []
+        },
+        {
+            "rule_id": "R004",
+            "category": "performance",
+            "condition": "sharpe < 1.8",
+            "action": "Improve signal quality, add regime filters, or combine with other factors. Target Sharpe > 1.8 for institutional quality.",
+            "priority": "critical",
+            "research_basis": "Institutional standards: Sharpe > 1.5 good, > 2.0 excellent (AQR, Two Sigma benchmarks)",
+            "learned_from": []
+        },
+        {
+            "rule_id": "R005",
+            "category": "stability",
+            "condition": "split_sharpe_std > 1.5",
+            "action": "Add regime awareness or reduce lookback window. Unstable performance indicates overfitting.",
+            "priority": "medium",
+            "research_basis": "Harvey et al. (2016): Stability across subperiods critical to avoid false discoveries",
+            "learned_from": []
+        },
+        {
+            "rule_id": "R006",
+            "category": "momentum_specific",
+            "condition": "factor_type == 'momentum' and sharpe < 2.0",
+            "action": "Momentum factors should achieve Sharpe > 2.0. Add volatility scaling or regime filter.",
+            "priority": "high",
+            "research_basis": "Jegadeesh & Titman (1993, 2001): Momentum Sharpe typically 1.5-2.5 with proper implementation",
+            "learned_from": []
+        },
+        {
+            "rule_id": "R007",
+            "category": "ic_stability",
+            "condition": "ic_std > 0.15",
+            "action": "IC volatility too high. Indicates inconsistent predictive power. Add signal smoothing or regime filters.",
+            "priority": "medium",
+            "research_basis": "Information Ratio = IC / IC_std. High IC_std reduces IR and indicates instability",
+            "learned_from": []
+        },
+        {
+            "rule_id": "R008",
+            "category": "capacity",
+            "condition": "turnover_monthly > 150",
+            "action": "Turnover too high for scalability. Reduce to < 100% for institutional capacity.",
+            "priority": "high",
+            "research_basis": "Capacity constraints: High turnover limits AUM scalability (Pedersen 2015)",
+            "learned_from": []
+        },
+        {
+            "rule_id": "R009",
+            "category": "tail_risk",
+            "condition": "skew < -0.5",
+            "action": "Negative skew indicates tail risk. Add downside protection or position limits.",
+            "priority": "medium",
+            "research_basis": "Taleb (2007): Negative skew = exposure to black swan events",
+            "learned_from": []
+        },
+        {
+            "rule_id": "R010",
+            "category": "diversification",
+            "condition": "hit_rate < 0.52",
+            "action": "Low hit rate suggests weak signal. Need hit rate > 52% for consistent edge.",
+            "priority": "medium",
+            "research_basis": "Statistical significance: 52%+ hit rate needed for p < 0.05 over 250 trades",
+            "learned_from": []
+        }
+    ],
+    "global_constraints": {
+        "min_sharpe": 1.8,
+        "max_maxdd": -0.25,
+        "max_turnover_monthly": 100.0,
+        "min_avg_ic": 0.05,
+        "max_split_sharpe_std": 1.5,
+        "min_hit_rate": 0.52,
+        "max_ic_std": 0.15,
+        "min_skew": -0.5
+    },
+    "iteration_limits": {
+        "max_iterations": 15,
+        "early_stop_sharpe": 2.5
+    },
+    "research_references": [
+        "Grinold & Kahn (2000): Active Portfolio Management",
+        "Harvey, Liu, Zhu (2016): ...and the Cross-Section of Expected Returns",
+        "Jegadeesh & Titman (1993): Returns to Buying Winners and Selling Losers",
+        "Frazzini, Israel, Moskowitz (2018): Trading Costs",
+        "Pedersen (2015): Efficiently Inefficient",
+        "Taleb (2007): The Black Swan"
+    ]
+}
+```

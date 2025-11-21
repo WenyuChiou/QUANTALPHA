@@ -11,8 +11,10 @@ from .backtester import BacktesterAgent
 from .critic import CriticAgent
 from .librarian import LibrarianAgent
 from .reporter import ReporterAgent
+from .reflector import ReflectorAgent
 from ..memory.store import ExperimentStore
 from ..memory.factor_registry import FactorRegistry
+from ..memory.policy_manager import PolicyManager
 from ..tools.fetch_data import fetch_data, get_universe_tickers
 from ..tools.logbook import log_run
 
@@ -44,6 +46,10 @@ class Orchestrator:
         self.critic = CriticAgent(db_path=db_path)
         self.librarian = LibrarianAgent(db_path=db_path, index_path=index_path)
         self.reporter = ReporterAgent(db_path=db_path)
+        self.reflector = ReflectorAgent()
+        
+        # Initialize policy manager
+        self.policy_manager = PolicyManager()
         
         # Initialize archive
         from ..archive.success_factors import SuccessFactorArchive
@@ -343,4 +349,225 @@ class Orchestrator:
             all_results['total_failed'] += len(iteration_result['failed'])
         
         return all_results
+    
+    def run_discovery_loop(
+        self,
+        universe: str = 'sp500',
+        n_candidates: int = 3,
+        max_iterations: Optional[int] = None,
+        target_sharpe: Optional[float] = None,
+        focus_topics: Optional[List[str]] = None
+    ) -> Optional[str]:
+        """Run iterative alpha discovery loop until target is met.
+        
+        Args:
+            universe: Universe name
+            n_candidates: Number of candidates per iteration
+            max_iterations: Maximum iterations (default from policy rules)
+            target_sharpe: Target Sharpe ratio (default from policy rules)
+            focus_topics: Topics to focus on
+        
+        Returns:
+            Alpha ID if successful, None otherwise
+        """
+        if self.prices_df is None:
+            self.initialize_data()
+        
+        # Get limits from policy rules
+        if max_iterations is None:
+            max_iterations = self.policy_manager.get_max_iterations()
+        if target_sharpe is None:
+            target_sharpe = self.policy_manager.rules['global_constraints']['min_sharpe']
+        
+        print(f"\n{'='*70}")
+        print(f" ALPHA DISCOVERY LOOP")
+        print(f" Universe: {universe}")
+        print(f" Target Sharpe: {target_sharpe}")
+        print(f" Max Iterations: {max_iterations}")
+        print(f"{'='*70}\n")
+        
+        past_lessons = []
+        
+        for iteration in range(1, max_iterations + 1):
+            alpha_id = f"alpha_{iteration:03d}"
+            
+            print(f"\n{'='*70}")
+            print(f" ITERATION {iteration}: {alpha_id}")
+            print(f"{'='*70}\n")
+            
+            # Step 1: Research (with policy rules and lessons)
+            print(f"[1/6] ResearcherAgent proposing factors...")
+            try:
+                result = self.researcher.propose_factor(
+                    market_regime="unknown",
+                    existing_factors=[],
+                    # TODO: Pass policy_rules and past_lessons to researcher
+                )
+                
+                if result.status != "SUCCESS":
+                    print(f"  ✗ Failed to generate proposal: {result.content.summary}")
+                    continue
+                
+                factor_yaml = result.content.data['yaml_content']
+                print(f"  ✓ Generated factor proposal")
+                
+            except Exception as e:
+                print(f"  ✗ Error: {e}")
+                continue
+            
+            # Parse factor
+            from ..factors.dsl import DSLParser
+            parser = DSLParser()
+            spec = parser.parse(factor_yaml)
+            
+            # Step 2: Feature Engineering
+            print(f"[2/6] FeatureAgent computing signals...")
+            try:
+                feature_result = self.feature_agent.compute_features(
+                    factor_yaml,
+                    self.prices_df,
+                    self.returns_df
+                )
+                
+                if feature_result.status != "SUCCESS":
+                    print(f"  ✗ Failed: {feature_result.content.summary}")
+                    continue
+                
+                signals_df = feature_result.content.data['signals']
+                signals_meta = feature_result.content.data.get('meta', {})
+                print(f"  ✓ Computed signals")
+                
+            except Exception as e:
+                print(f"  ✗ Error: {e}")
+                continue
+            
+            # Step 3: Backtest
+            print(f"[3/6] BacktesterAgent running backtest...")
+            try:
+                backtest_result = self.backtester.run_backtest(
+                    factor_yaml=factor_yaml,
+                    prices_df=self.prices_df,
+                    returns_df=self.returns_df,
+                    run_id=f"{alpha_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                )
+                
+                if backtest_result.status != "SUCCESS":
+                    print(f"  ✗ Backtest failed: {backtest_result.content.summary}")
+                    continue
+                
+                metrics = backtest_result.content.data['metrics']
+                output_dir = backtest_result.content.data.get('output_dir', '')
+                
+                print(f"  ✓ Backtest completed")
+                print(f"    Sharpe: {metrics.get('sharpe', 0):.2f}")
+                print(f"    Annual Return: {metrics.get('ann_ret', 0):.2%}")
+                print(f"    Max Drawdown: {metrics.get('maxdd', 0):.2%}")
+                
+            except Exception as e:
+                print(f"  ✗ Error: {e}")
+                import traceback
+                traceback.print_exc()
+                continue
+            
+            # Step 4: Critique
+            print(f"[4/6] CriticAgent evaluating...")
+            try:
+                # Log run first
+                log_result = log_run(
+                    factor_id=0,  # Temporary
+                    start_date=self.prices_df.index.min(),
+                    end_date=self.prices_df.index.max(),
+                    metrics=metrics,
+                    regime_label=None,
+                    issues=[],
+                    db_path=self.store.db_path
+                )
+                run_id = log_result['run_id']
+                
+                critique_result = self.critic.critique_run(
+                    run_id=run_id,
+                    metrics=metrics,
+                    issues=[],
+                    factor_yaml=factor_yaml
+                )
+                
+                compliance = critique_result.content.data
+                verdict = compliance.get('verdict', 'FAIL')
+                
+                print(f"  ✓ Verdict: {verdict}")
+                if compliance.get('issues'):
+                    print(f"    Issues: {len(compliance['issues'])}")
+                
+            except Exception as e:
+                print(f"  ✗ Error: {e}")
+                compliance = {'verdict': 'FAIL', 'issues': []}
+            
+            # Step 5: Reflect
+            print(f"[5/6] ReflectorAgent analyzing...")
+            try:
+                lessons = self.reflector.analyze(
+                    alpha_id=alpha_id,
+                    metrics=metrics,
+                    compliance=compliance,
+                    signals_meta=signals_meta,
+                    factor_yaml=factor_yaml,
+                    past_lessons=past_lessons
+                )
+                
+                past_lessons.append(lessons)
+                
+                print(f"  ✓ Lessons generated")
+                print(f"    Root causes: {len(lessons['root_causes'])}")
+                print(f"    Suggestions: {len(lessons['improvement_suggestions'])}")
+                
+                # Save lessons
+                lessons_path = Path(output_dir) / 'lessons.json' if output_dir else None
+                if lessons_path:
+                    import json
+                    with open(lessons_path, 'w') as f:
+                        json.dump(lessons, f, indent=2)
+                
+            except Exception as e:
+                print(f"  ✗ Error: {e}")
+                import traceback
+                traceback.print_exc()
+                lessons = {'verdict': 'FAIL', 'root_causes': [], 'improvement_suggestions': []}
+            
+            # Step 6: Check if target met
+            print(f"[6/6] Checking targets...")
+            meets_constraints, violations = self.policy_manager.check_constraints(metrics)
+            
+            if meets_constraints:
+                print(f"\n{'='*70}")
+                print(f" ✅ SUCCESS! {alpha_id} meets all targets")
+                print(f" Sharpe: {metrics.get('sharpe', 0):.2f} >= {target_sharpe}")
+                print(f" MaxDD: {metrics.get('maxdd', 0):.2%} >= -20%")
+                print(f"{'='*70}\n")
+                
+                # Archive successful factor
+                if output_dir:
+                    success_dir = Path('success_factors') / f"{alpha_id}_{spec.name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                    success_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    # Copy artifacts
+                    import shutil
+                    if Path(output_dir).exists():
+                        shutil.copytree(output_dir, success_dir, dirs_exist_ok=True)
+                    
+                    print(f"  Archived to: {success_dir}")
+                
+                return alpha_id
+            
+            else:
+                print(f"\n  ✗ Does not meet targets:")
+                for violation in violations:
+                    print(f"    - {violation}")
+                print(f"\n  Continuing to next iteration...\n")
+        
+        print(f"\n{'='*70}")
+        print(f" ⚠️ Max iterations ({max_iterations}) reached")
+        print(f" No alpha met the target criteria")
+        print(f"{'='*70}\n")
+        
+        return None
 
