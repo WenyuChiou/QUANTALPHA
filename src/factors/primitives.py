@@ -17,6 +17,8 @@ def RET_LAG(lag: int, period: int, prices: pd.Series) -> pd.Series:
         Lagged return series
     """
     if lag < 1:
+        # CRITICAL: Lag must be positive to prevent lookahead bias.
+        # A lag of 0 would mean using today's return to predict today's return.
         raise ValueError("lag must be >= 1 to avoid lookahead")
     
     # Calculate return over period, then lag
@@ -83,6 +85,8 @@ def VOL_TARGET(ann_vol: float, using: Union[str, pd.Series], prices: Optional[pd
     vol = vol.replace(0, np.nan)
     
     # Scale to target volatility
+    # If realized vol is 30% and target is 15%, scaling will be 0.5
+    # This reduces position size during high volatility periods
     scaling = ann_vol / vol
     return scaling
 
@@ -123,6 +127,9 @@ def CORRELATION_DECAY(series1: pd.Series, series2: pd.Series, window: int, decay
     rolling_corr = series1.rolling(window=window).corr(series2)
     
     # Apply exponential decay
+    # Recent correlations have higher weight (decay^0 = 1)
+    # Older correlations fade out (decay^k)
+    # This helps detect recent shifts in correlation structure
     decayed = rolling_corr * (decay ** np.arange(len(rolling_corr)))
     
     return decayed

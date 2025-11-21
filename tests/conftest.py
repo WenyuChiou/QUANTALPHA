@@ -9,8 +9,8 @@ import tempfile
 import shutil
 
 from src.memory.store import ExperimentStore
-from src.rag.indexer import KnowledgeBaseIndexer
-from src.rag.retriever import HybridRetriever
+# from src.rag.indexer import KnowledgeBaseIndexer
+# from src.rag.retriever import HybridRetriever
 
 
 @pytest.fixture
@@ -35,8 +35,13 @@ def temp_kb_index():
     
     kb_dir = Path("kb")
     if kb_dir.exists():
-        indexer = KnowledgeBaseIndexer(kb_dir=kb_dir, index_path=str(index_path))
-        indexer.rebuild_index()
+        try:
+            from src.rag.indexer import KnowledgeBaseIndexer
+            indexer = KnowledgeBaseIndexer(kb_dir=kb_dir, index_path=str(index_path))
+            indexer.rebuild_index()
+        except ImportError:
+            # Skip indexing if dependencies are missing
+            pass
     
     yield str(index_path)
     
@@ -67,8 +72,15 @@ def sample_prices():
 
 @pytest.fixture
 def sample_returns(sample_prices):
-    """Generate sample returns from prices."""
-    return sample_prices.pct_change(1).dropna()
+    """Generate sample return data from prices."""
+    returns = sample_prices.pct_change()
+    return returns
+
+
+@pytest.fixture
+def sample_prices_returns(sample_prices, sample_returns):
+    """Combined fixture for prices and returns."""
+    return sample_prices, sample_returns
 
 
 @pytest.fixture

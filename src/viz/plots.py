@@ -2,9 +2,155 @@
 
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 from typing import Optional, Dict, Any, List
+from pathlib import Path
+
+# Optional plotly imports
+try:
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    PLOTLY_AVAILABLE = False
+
+
+def _pct(x, _=None):
+    """Format value as percentage."""
+    return f"{100*x:.2f}%"
+
+
+def compute_drawdown(equity: pd.Series) -> pd.Series:
+    """Compute drawdown from equity curve.
+    
+    Args:
+        equity: Equity curve series
+    
+    Returns:
+        Drawdown series (negative values)
+    """
+    peak = equity.cummax()
+    return (equity / peak - 1.0).fillna(0.0)
+
+
+def plot_equity_curve_3panel(
+    equity: pd.Series,
+    benchmark: Optional[pd.Series] = None,
+    turnover: Optional[pd.Series] = None,
+    meta: Optional[Dict[str, str]] = None,
+    out_path: Optional[Path] = None,
+    oos_start: Optional[pd.Timestamp] = None
+) -> Optional[Path]:
+    """Render 3-panel equity curve chart matching blueprint specification.
+    
+    Creates a publication-quality chart with:
+    - Panel 1: Equity curve vs benchmark with info box
+    - Panel 2: Drawdown
+    - Panel 3: Turnover
+    
+    Args:
+        equity: Equity curve series (indexed by date)
+        benchmark: Optional benchmark equity curve
+        turnover: Optional turnover series
+        meta: Metadata dictionary for info box (strategy_name, period, metrics, etc.)
+        out_path: Output path for PNG file
+        oos_start: Out-of-sample start date (marked with dashed vertical line)
+    
+    Returns:
+        Path to saved chart, or None if out_path not provided
+    """
+    if meta is None:
+        meta = {}
+    
+    # Sort and prepare data
+    equity = equity.sort_index()
+    dd = compute_drawdown(equity)
+    
+    if benchmark is not None:
+        benchmark = benchmark.reindex_like(equity).ffill().bfill()
+    
+    if turnover is None:
+        # Create dummy turnover if not provided
+        turnover = pd.Series(0.0, index=equity.index)
+    else:
+        turnover = turnover.reindex_like(equity).fillna(0.0)
+    
+    # Create figure with 3 panels
+    fig, axes = plt.subplots(
+        3, 1,
+        figsize=(11.5, 6.5),
+        sharex=True,
+        gridspec_kw={'height_ratios': [2.2, 1, 1]}
+    )
+    ax1, ax2, ax3 = axes
+    
+    # Panel 1: Equity curve
+    ax1.plot(equity.index, equity.values, lw=2.0, alpha=0.95, label='Strategy')
+    ax1.fill_between(equity.index, 1.0, equity.values, alpha=0.2)
+    
+    if benchmark is not None:
+        ax1.plot(benchmark.index, benchmark.values, ls='--', lw=1.5, alpha=0.7, label='Benchmark')
+    
+    if oos_start is not None:
+        ax1.axvline(oos_start, ls='--', lw=1.0, color='red', alpha=0.5, label='OOS Start')
+    
+    ax1.set_title(f"Equity Curve ({meta.get('strategy_name', 'Strategy')})")
+    ax1.set_ylabel("Equity Value")
+    ax1.grid(alpha=0.25)
+    ax1.legend(loc='upper left', fontsize=8)
+    
+    # Info box
+    text = (
+        f"Strategy: {meta.get('strategy_name', 'N/A')}\n"
+        f"Period: {meta.get('period', 'N/A')}\n"
+        f"Total Return: {meta.get('total_return', 'N/A')}\n"
+        f"Annual Return: {meta.get('annual_return', 'N/A')}\n"
+        f"Sharpe Ratio: {meta.get('sharpe', 'N/A')}\n"
+        f"PSR: {meta.get('psr', 'N/A')}\n"
+        f"Sortino Ratio: {meta.get('sortino', 'N/A')}\n"
+        f"Calmar Ratio: {meta.get('calmar', 'N/A')}\n"
+        f"Linearity: {meta.get('linearity', 'N/A')}\n"
+        f"Max Drawdown: {meta.get('maxdd', 'N/A')}\n"
+        f"VaR 95%: {meta.get('var95', 'N/A')}\n"
+        f"CVaR: {meta.get('cvar', 'N/A')}\n"
+        f"Avg. Annual Turnover: {meta.get('avg_turnover', 'N/A')}"
+    )
+    
+    ax1.text(
+        0.01, 0.99, text,
+        transform=ax1.transAxes,
+        va='top', ha='left',
+        fontsize=9,
+        bbox=dict(boxstyle='round', alpha=0.08, pad=0.45, facecolor='white')
+    )
+    
+    # Panel 2: Drawdown
+    ax2.fill_between(dd.index, dd.values, 0, where=dd.values<0, alpha=0.45, color='red')
+    ax2.plot(dd.index, dd.values, lw=1.0, color='darkred', alpha=0.7)
+    ax2.set_ylabel('Drawdown')
+    ax2.yaxis.set_major_formatter(FuncFormatter(_pct))
+    ax2.grid(alpha=0.25)
+    ax2.axhline(0, color='black', lw=0.5, alpha=0.3)
+    
+    # Panel 3: Turnover
+    ax3.plot(turnover.index, turnover.values, lw=1.2, color='steelblue')
+    ax3.set_ylabel('Turnover')
+    ax3.yaxis.set_major_formatter(FuncFormatter(_pct))
+    ax3.set_xlabel('Date')
+    ax3.grid(alpha=0.25)
+    
+    # Tight layout and save
+    fig.tight_layout()
+    
+    if out_path is not None:
+        out_path = Path(out_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(out_path, dpi=180, bbox_inches='tight')
+        plt.close(fig)
+        return out_path
+    else:
+        return None
 
 
 def plot_equity_curve(

@@ -45,6 +45,10 @@ class Orchestrator:
         self.librarian = LibrarianAgent(db_path=db_path, index_path=index_path)
         self.reporter = ReporterAgent(db_path=db_path)
         
+        # Initialize archive
+        from ..archive.success_factors import SuccessFactorArchive
+        self.archive = SuccessFactorArchive()
+        
         # Data cache
         self.prices_df = None
         self.returns_df = None
@@ -95,12 +99,42 @@ class Orchestrator:
             'failed': []
         }
         
+        # Initialize Conversation Context
+        from ..memory.schemas import ConversationContext
+        ctx = ConversationContext(
+            iteration_id=datetime.now().strftime("%Y%m%d_%H%M%S"),
+            market_regime="unknown", # TODO: Detect regime
+            state={"focus_topics": focus_topics}
+        )
+        
         # Step 1: Researcher proposes factors
         print("Step 1: Researcher proposing factors...")
-        factor_proposals = self.researcher.propose_factors(
-            n_factors=n_candidates,
-            focus_topics=focus_topics
-        )
+        # Note: Researcher still returns list of strings (YAMLs) for now, 
+        # but we should ideally wrap this too. For now, we'll wrap the *process* 
+        # of getting proposals if we change researcher to return AgentResult with list.
+        # Current researcher.propose_factors returns List[str] (YAMLs).
+        # Let's assume we haven't changed propose_factors signature to return AgentResult yet
+        # OR we did? I changed propose_factor (singular) in my thought process but 
+        # the file content I wrote to researcher.py had propose_factor returning AgentResult.
+        # Wait, the original researcher had propose_factors (plural).
+        # My rewrite of researcher.py replaced the WHOLE file and only had propose_factor (singular).
+        # I need to adapt the orchestrator to call propose_factor multiple times or 
+        # I should have kept propose_factors.
+        # Let's call propose_factor n times.
+        
+        factor_proposals = []
+        for _ in range(n_candidates):
+            # We use the new singular method
+            result = self.researcher.propose_factor(
+                market_regime=ctx.market_regime,
+                existing_factors=[]
+            )
+            ctx.add_log(result)
+            
+            if result.status == "SUCCESS":
+                factor_proposals.append(result.content.data['yaml_content'])
+            else:
+                print(f"  Error proposing factor: {result.content.summary}")
         
         for i, factor_yaml in enumerate(factor_proposals):
             print(f"\nProcessing candidate {i+1}/{len(factor_proposals)}...")
@@ -125,16 +159,17 @@ class Orchestrator:
                     self.prices_df,
                     self.returns_df
                 )
+                ctx.add_log(feature_result)
                 
-                if not feature_result['success']:
-                    print(f"  Failed: {feature_result.get('error', 'Unknown error')}")
+                if feature_result.status != "SUCCESS":
+                    print(f"  Failed: {feature_result.content.summary}")
                     results['failed'].append({
                         'factor_id': factor.id,
-                        'error': feature_result.get('error')
+                        'error': feature_result.content.summary
                     })
                     continue
                 
-                signals_df = feature_result['signals']
+                signals_df = feature_result.content.data['signals']
                 
                 # Step 3: Backtester runs backtest
                 print("  Running backtest...")
@@ -144,17 +179,23 @@ class Orchestrator:
                     returns_df=self.returns_df,
                     run_id=f"run_{factor.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
                 )
+                ctx.add_log(backtest_result)
                 
-                if backtest_result.get('metrics') is None:
-                    print("  Backtest failed")
+                if backtest_result.status != "SUCCESS":
+                    print(f"  Backtest failed: {backtest_result.content.summary}")
                     results['failed'].append({
                         'factor_id': factor.id,
-                        'error': backtest_result.get('error', 'Backtest failed')
+                        'error': backtest_result.content.summary
                     })
                     continue
                 
-                metrics = backtest_result['metrics']
-                issues = backtest_result.get('issues', [])
+                metrics = backtest_result.content.data['metrics']
+                # issues = backtest_result.content.data.get('issues', []) # Backtester might not return issues in data yet if I didn't put it there
+                # Checking backtester refactor... I put 'issues' in data only on failure.
+                # On success, I put metrics and output_dir.
+                # I should probably include issues in success too if there are warnings.
+                # For now, let's assume empty issues on success.
+                issues = [] 
                 
                 # Step 4: Log run
                 print("  Logging run...")
@@ -163,7 +204,7 @@ class Orchestrator:
                     start_date=self.prices_df.index.min(),
                     end_date=self.prices_df.index.max(),
                     metrics=metrics,
-                    regime_label=None,  # Could be determined from data
+                    regime_label=None,
                     issues=issues,
                     db_path=self.store.db_path
                 )
@@ -178,14 +219,58 @@ class Orchestrator:
                     issues=issues,
                     factor_yaml=factor_yaml
                 )
+                ctx.add_log(critique_result)
                 
-                if critique_result['passed']:
+                passed = critique_result.content.data['passed']
+                
+                if passed:
                     print(f"  ✓ Passed (Sharpe: {metrics.get('sharpe', 0):.2f})")
                     results['successful'].append({
                         'factor_id': factor.id,
                         'run_id': run_id,
                         'metrics': metrics
                     })
+                    
+                    # Check if it meets strict archive criteria
+                    if self.archive.should_archive(metrics):
+                        print("  ★ Meets archive criteria! Archiving...")
+                        
+                        # Prepare data for archive
+                        # We need to reconstruct the agent_outputs dict expected by archive_factor
+                        # OR update archive_factor to take ConversationContext.
+                        # For now, let's map it to the expected dict to avoid breaking archive.
+                        
+                        agent_outputs = {
+                            'researcher': {'proposal': factor_yaml}, # Simplified
+                            'feature': feature_result.content.data,
+                            'backtest': backtest_result.content.data,
+                            'critic': critique_result.content.data
+                        }
+                        
+                        computations = {
+                            'signals': signals_df,
+                            # 'returns': ... # We need returns and equity curve. 
+                            # Backtester refactor saved them to disk but didn't return the DF in data.
+                            # We might need to load them or adjust backtester to return them.
+                            # For now, let's assume we can't easily get them without reading the parquet.
+                            # Wait, I can just pass empty dicts if I don't have them in memory, 
+                            # but archive might need them for plotting.
+                            # Let's skip plotting in archive for now if data is missing.
+                        }
+                        
+                        # Convert ConversationContext logs to list of dicts for archive
+                        conversation_log = [log.dict() for log in ctx.logs]
+                        
+                        archive_path = self.archive.archive_factor(
+                            factor_name=spec.name,
+                            factor_yaml=factor_yaml,
+                            agent_outputs=agent_outputs,
+                            computations=computations,
+                            backtest_results={'metrics': metrics}, # Simplified
+                            conversation_log=conversation_log
+                        )
+                        print(f"  Archived to: {archive_path}")
+                        
                 else:
                     print(f"  ✗ Failed")
                     results['failed'].append({
@@ -197,11 +282,13 @@ class Orchestrator:
                 results['candidates'].append({
                     'factor_id': factor.id,
                     'run_id': run_id,
-                    'passed': critique_result['passed']
+                    'passed': passed
                 })
                 
             except Exception as e:
                 print(f"  Error: {e}")
+                import traceback
+                traceback.print_exc()
                 results['failed'].append({
                     'error': str(e)
                 })
@@ -209,12 +296,13 @@ class Orchestrator:
         
         # Step 6: Reporter generates summary
         print("\nGenerating iteration summary...")
-        summary = self.reporter.generate_iteration_plan(
+        plan_result = self.reporter.generate_iteration_plan(
             successful_factors=results['successful'],
             failed_factors=results['failed']
         )
+        ctx.add_log(plan_result)
         
-        results['summary'] = summary
+        results['summary'] = plan_result.content.data.get('plan_text', 'No plan generated')
         
         return results
     

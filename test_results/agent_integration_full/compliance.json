@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "verdict": "CONDITIONAL",
+  "issues": [
+    {
+      "type": "low_sharpe",
+      "severity": "warning",
+      "detail": "Sharpe ratio -0.48 is below 1.0",
+      "location": null,
+      "recommendation": "Consider adding more signals or improving signal quality"
+    }
+  ],
+  "recommendations": [
+    "Monitor performance in different market regimes",
+    "Consider transaction cost sensitivity"
+  ],
+  "critique_summary": "Factor shows mixed performance with 1 issues identified",
+  "lesson_id": null,
+  "reviewed_at": "2025-11-21T00:49:14.664338"
+}

@@ -14,7 +14,9 @@ class TestResearcherAgent:
     @pytest.fixture
     def researcher(self, temp_db, temp_kb_index):
         """Create Researcher Agent instance."""
-        with patch('src.agents.researcher.Ollama'):
+        # Mock both possible import paths
+        with patch('langchain_community.llms.Ollama'), \
+             patch('langchain.llms.Ollama'):
             agent = ResearcherAgent(
                 model_name="deepseek-r1",
                 db_path=temp_db.db_path,

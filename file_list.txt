@@ -1,0 +1,16 @@
+ 磁碟區 C 中的磁碟是 Windows
+ 磁碟區序號:  FA52-7C45
+
+ C:\Users\wenyu\Desktop\investment\QuantAlpha\src\agents 的目錄
+
+2025/11/20  下午 11:16             3,904 backtester.py
+2025/11/20  下午 11:21            11,262 critic.py
+2025/11/20  下午 11:15             3,552 feature_agent.py
+2025/11/20  下午 11:01             5,647 librarian.py
+2025/11/20  下午 11:18            14,619 orchestrator.py
+2025/11/20  下午 11:20            10,391 reporter.py
+2025/11/20  下午 11:21             4,137 researcher.py
+2025/11/20  上午 02:42                31 __init__.py
+2025/11/20  上午 02:41             1,481 __main__.py
+               9 個檔案          55,024 位元組
+               0 個目錄  3,085,304,258,560 位元組可用

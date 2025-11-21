@@ -1,0 +1,5 @@
+{
+  "proposal": "\nname: nonlinear_momentum_demo\nuniverse: test_universe\nfrequency: D\nsignals:\n  - id: mom_signal\n    custom_code: |\n      # Nonlinear momentum with volatility adjustment\n      # Calculate 21-day momentum\n      mom_21 = returns.rolling(21).mean()\n      \n      # Calculate 21-day volatility\n      vol_21 = returns.rolling(21).std()\n      \n      # Adjust momentum by volatility (simple nonlinear interaction)\n      # Avoid division by zero\n      adj_mom = mom_21 / (vol_21 + 1e-6)\n      \n      # Rank across assets (cross-sectional)\n      result = adj_mom.rank(axis=1, pct=True)\n    code_type: custom\nportfolio:\n  long_short: true\n  top_n: 2\n",
+  "thought_process": "I noticed that simple momentum often fails in high volatility regimes. By normalizing momentum with volatility, we can create a more robust signal.",
+  "code_explanation": "The custom code calculates a 21-day rolling mean and divides it by the 21-day rolling standard deviation."
+}

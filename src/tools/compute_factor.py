@@ -62,12 +62,23 @@ def compute_factor(
     
     for signal_spec in spec.signals:
         try:
-            signal_values = _compute_signal(
-                signal_spec.expr,
-                prices_df,
-                returns_df,
-                signal_spec.normalize
-            )
+            # Check if this is a custom code signal or DSL expression
+            if signal_spec.custom_code:
+                # Execute custom code
+                signal_values = _compute_custom_signal(
+                    signal_spec.custom_code,
+                    prices_df,
+                    returns_df,
+                    signal_spec.normalize
+                )
+            else:
+                # Execute DSL expression
+                signal_values = _compute_signal(
+                    signal_spec.expr,
+                    prices_df,
+                    returns_df,
+                    signal_spec.normalize
+                )
             signal_dfs[signal_spec.id] = signal_values
         except Exception as e:
             warnings.append(f"Error computing signal '{signal_spec.id}': {e}")
@@ -160,6 +171,60 @@ def _compute_signal(
     if normalize:
         if normalize.startswith("zscore"):
             # Extract window
+            window_match = re.search(r'zscore_(\d+)', normalize)
+            if window_match:
+                window = int(window_match.group(1))
+                signal = (signal - signal.rolling(window).mean()) / signal.rolling(window).std()
+            else:
+                signal = (signal - signal.mean()) / signal.std()
+    
+    return signal
+
+
+def _compute_custom_signal(
+    code: str,
+    prices_df: pd.DataFrame,
+    returns_df: pd.DataFrame,
+    normalize: Optional[str] = None
+) -> pd.Series:
+    """Compute a signal using custom Python code.
+    
+    Args:
+        code: Python code to execute
+        prices_df: Prices DataFrame
+        returns_df: Returns DataFrame
+        normalize: Normalization method
+    
+    Returns:
+        Signal series
+    """
+    from ..factors.nonlinear import execute_nonlinear_factor
+    
+    # Execute custom code
+    result = execute_nonlinear_factor(
+        code,
+        prices_df,
+        returns_df,
+        timeout=60
+    )
+    
+    if not result['success']:
+        raise ValueError(f"Custom code execution failed: {result['error']}")
+    
+    # Extract signals (should be DataFrame)
+    signals_df = result['signals']
+    
+    # Convert to Series (average across tickers for now)
+    if isinstance(signals_df, pd.DataFrame):
+        signal = signals_df.mean(axis=1)
+    else:
+        signal = signals_df
+    
+    # Apply normalization
+    if normalize:
+        if normalize.startswith("zscore"):
+            # Extract window
+            import re
             window_match = re.search(r'zscore_(\d+)', normalize)
             if window_match:
                 window = int(window_match.group(1))

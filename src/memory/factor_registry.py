@@ -1,18 +1,33 @@
-"""Factor registry for loading and validating Factor DSL YAML specs."""
+"""Factor registry for storing and retrieving factor specifications."""
 
-import yaml
+from typing import List, Dict, Any, Optional
 from pathlib import Path
-from typing import Dict, Any, Optional, List
 from datetime import datetime
-
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
+import yaml
+import json
+import sqlite3
 
 
 class SignalSpec(BaseModel):
-    """Signal specification within a factor."""
+    """Signal specification within a factor.
+    
+    Supports both DSL expressions and custom Python code for nonlinear factors.
+    """
     id: str
-    expr: str
+    expr: Optional[str] = None  # DSL expression (for linear factors)
+    custom_code: Optional[str] = None  # Python code (for nonlinear factors)
+    code_type: Optional[str] = None  # Type of custom code: 'sklearn', 'custom', etc.
     normalize: Optional[str] = None
+    standardize: Optional[str] = None
+    
+    class Config:
+        @staticmethod
+        def schema_extra(schema, model):
+            schema['description'] = (
+                "Signal specification. Must provide either 'expr' (DSL expression) "
+                "or 'custom_code' (Python code), but not both."
+            )
 
 
 class PortfolioSpec(BaseModel):
@@ -47,7 +62,8 @@ class FactorSpec(BaseModel):
     validation: ValidationSpec = Field(default_factory=ValidationSpec)
     targets: TargetsSpec = Field(default_factory=TargetsSpec)
     
-    @validator('frequency')
+    @field_validator('frequency')
+    @classmethod
     def validate_frequency(cls, v):
         if v not in ['D', 'W', 'M']:
             raise ValueError("Frequency must be D (daily), W (weekly), or M (monthly)")

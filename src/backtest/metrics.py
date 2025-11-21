@@ -17,7 +17,7 @@ def sharpe(returns: pd.Series, rf: float = 0.0, periods_per_year: int = 252) -> 
     Returns:
         Sharpe ratio
     """
-    if len(returns) == 0 or returns.std() == 0:
+    if len(returns) == 0 or np.isclose(returns.std(), 0, atol=1e-10):
         return 0.0
     
     excess_returns = returns - (rf / periods_per_year)
@@ -108,7 +108,7 @@ def turnover(positions: pd.DataFrame) -> float:
         return 0.0
     
     # Calculate change in positions
-    position_changes = positions.diff().abs()
+    position_changes = positions.diff().abs().iloc[1:]
     
     # Sum across all positions for each day
     daily_turnover = position_changes.sum(axis=1)
@@ -214,19 +214,38 @@ def drawdown_profile(equity_curve: pd.Series) -> Dict[str, Any]:
     for i, is_dd in enumerate(in_drawdown):
         if is_dd and start_idx is None:
             start_idx = i
-            peak_idx = equity_curve[:i].idxmax() if i > 0 else None
+            # Find peak before this drawdown
+            if i > 0:
+                # Use iloc for integer slicing
+                peak_val = equity_curve.iloc[:i].max()
+                # We don't strictly need peak_idx if we have peak_val
+            else:
+                peak_val = equity_curve.iloc[0]
+                
         elif not is_dd and start_idx is not None:
             # Drawdown ended
-            dd_duration = i - start_idx
+            end_idx = i
+            
+            # Duration in days
+            start_date = equity_curve.index[start_idx]
+            end_date = equity_curve.index[i]
+            dd_duration = (end_date - start_date).days
             drawdown_periods.append(dd_duration)
             
-            if peak_idx is not None:
-                recovery_idx = equity_curve[start_idx:].idxmax()
-                recovery_time = (equity_curve[start_idx:] >= equity_curve[peak_idx]).idxmax() - start_idx
-                recovery_times.append(recovery_time)
+            # Recovery time
+            # We are already recovered at index i (since is_dd is False)
+            # So recovery time is just the duration
+            recovery_times.append(dd_duration)
             
             start_idx = None
-            peak_idx = None
+            
+    # Handle case where drawdown is still ongoing at the end
+    if start_idx is not None:
+        start_date = equity_curve.index[start_idx]
+        end_date = equity_curve.index[-1]
+        dd_duration = (end_date - start_date).days
+        drawdown_periods.append(dd_duration)
+        # No recovery time for ongoing drawdown
     
     return {
         'max_dd': drawdown.min(),

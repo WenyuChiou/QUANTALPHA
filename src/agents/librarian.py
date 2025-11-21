@@ -3,8 +3,19 @@
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 
-from ..rag.indexer import KnowledgeBaseIndexer
-from ..rag.retriever import HybridRetriever
+try:
+    from ..rag.indexer import KnowledgeBaseIndexer
+    from ..rag.retriever import HybridRetriever
+except ImportError:
+    # Mock classes for missing dependencies
+    class KnowledgeBaseIndexer:
+        def __init__(self, **kwargs): pass
+        def rebuild_index(self): return {}
+        def index_file(self, *args): return 0
+        
+    class HybridRetriever:
+        def __init__(self, **kwargs): pass
+        def search(self, *args, **kwargs): return []
 from ..memory.store import ExperimentStore
 
 

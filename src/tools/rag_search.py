@@ -3,8 +3,6 @@
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 
-from ..rag.retriever import HybridRetriever
-
 
 def rag_search(
     query: str,
@@ -27,7 +25,17 @@ def rag_search(
         - results: List of search results
         - citations: List of citations
     """
-    retriever = HybridRetriever(index_path=index_path)
+    try:
+        from ..rag.retriever import HybridRetriever
+        retriever = HybridRetriever(index_path=index_path)
+    except ImportError:
+        # Return empty results if dependencies missing
+        return {
+            'results': [],
+            'citations': [],
+            'n_results': 0,
+            'error': "RAG dependencies missing"
+        }
     
     results = retriever.search(
         query=query,

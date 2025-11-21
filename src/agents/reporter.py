@@ -1,10 +1,34 @@
 """Reporter agent: generates summaries, dashboard notes, iteration plans."""
 
+import sys
+from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import datetime
-from langchain.llms import Ollama
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+
+# Add src to path if needed
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
+from src.memory.schemas import AgentResult, AgentContent, AgentArtifact
+
+try:
+    from langchain.llms import Ollama
+    from langchain.prompts import PromptTemplate
+    from langchain.chains import LLMChain
+except (ImportError, Exception): # Catch PydanticImportError (which inherits from ImportError or Exception)
+    try:
+        from langchain_community.llms import Ollama
+        from langchain_core.prompts import PromptTemplate
+        from langchain.chains import LLMChain
+    except (ImportError, Exception):
+        # Mock classes
+        class Ollama:
+            def __init__(self, **kwargs): pass
+            def __call__(self, *args, **kwargs): return "Mock response"
+        class PromptTemplate:
+            def __init__(self, **kwargs): pass
+        class LLMChain:
+            def __init__(self, **kwargs): pass
+            def run(self, **kwargs): return "Mock response"
 
 from ..memory.store import ExperimentStore
 
@@ -13,12 +37,7 @@ class ReporterAgent:
     """Agent that generates human-readable reports."""
     
     def __init__(self, model_name: str = "deepseek-r1", db_path: str = "experiments.db"):
-        """Initialize reporter agent.
-        
-        Args:
-            model_name: Ollama model name
-            db_path: Database path
-        """
+        """Initialize reporter agent."""
         self.llm = Ollama(model=model_name, temperature=0.5)
         self.store = ExperimentStore(db_path)
         
@@ -64,20 +83,28 @@ Provide a 2-3 paragraph summary highlighting:
     def generate_run_summary(
         self,
         run_id: int
-    ) -> str:
+    ) -> AgentResult:
         """Generate summary for a run.
         
         Args:
             run_id: Run ID
         
         Returns:
-            Summary text
+            AgentResult with summary text
         """
         session = self.store.get_session()
         try:
             run = session.query(self.store.Run).filter(self.store.Run.id == run_id).first()
             if not run:
-                return f"Run {run_id} not found"
+                return AgentResult(
+                    agent="Reporter",
+                    step="GenerateSummary",
+                    status="FAILURE",
+                    content=AgentContent(
+                        summary=f"Run {run_id} not found",
+                        data={"error": "Run not found"}
+                    )
+                )
             
             factor = self.store.get_factor(run.factor_id)
             metrics = run.metrics[0] if run.metrics else None
@@ -107,7 +134,28 @@ Turnover: {metrics.turnover_monthly:.1f}%
                 issues=issues_str
             )
             
-            return summary
+            return AgentResult(
+                agent="Reporter",
+                step="GenerateSummary",
+                status="SUCCESS",
+                content=AgentContent(
+                    summary="Run summary generated successfully.",
+                    data={
+                        "summary_text": summary,
+                        "run_id": run_id
+                    }
+                )
+            )
+        except Exception as e:
+            return AgentResult(
+                agent="Reporter",
+                step="GenerateSummary",
+                status="FAILURE",
+                content=AgentContent(
+                    summary=f"Error generating summary: {str(e)}",
+                    data={"error": str(e)}
+                )
+            )
         finally:
             session.close()
     
@@ -146,7 +194,7 @@ Turnover: {metrics.turnover_monthly:.1f}%
         self,
         successful_factors: List[Dict[str, Any]],
         failed_factors: List[Dict[str, Any]]
-    ) -> str:
+    ) -> AgentResult:
         """Generate plan for next iteration.
         
         Args:
@@ -154,11 +202,12 @@ Turnover: {metrics.turnover_monthly:.1f}%
             failed_factors: List of failed factor info
         
         Returns:
-            Iteration plan text
+            AgentResult with iteration plan
         """
-        plan_prompt = PromptTemplate(
-            input_variables=["successful", "failed"],
-            template="""Based on these results, generate a plan for the next iteration.
+        try:
+            plan_prompt = PromptTemplate(
+                input_variables=["successful", "failed"],
+                template="""Based on these results, generate a plan for the next iteration.
 
 ## CRITICAL PRIORITY: MOMENTUM FACTORS
 **MOMENTUM FACTORS ARE EXTREMELY IMPORTANT** and should be prioritized:
@@ -195,13 +244,36 @@ Provide:
 4. **Metrics-focused improvements**: How to improve factors that failed metrics requirements
 5. **Emphasize the importance of momentum factors** in the plan
 """
-        )
-        
-        successful_str = "\n".join([str(f) for f in successful_factors[:5]])
-        failed_str = "\n".join([str(f) for f in failed_factors[:5]])
-        
-        chain = LLMChain(llm=self.llm, prompt=plan_prompt)
-        plan = chain.run(successful=successful_str, failed=failed_str)
-        
-        return plan
+            )
+            
+            successful_str = "\n".join([str(f) for f in successful_factors[:5]])
+            failed_str = "\n".join([str(f) for f in failed_factors[:5]])
+            
+            chain = LLMChain(llm=self.llm, prompt=plan_prompt)
+            plan = chain.run(successful=successful_str, failed=failed_str)
+            
+            return AgentResult(
+                agent="Reporter",
+                step="GeneratePlan",
+                status="SUCCESS",
+                content=AgentContent(
+                    summary="Iteration plan generated.",
+                    data={
+                        "plan_text": plan,
+                        "success_count": len(successful_factors),
+                        "failure_count": len(failed_factors)
+                    }
+                )
+            )
+        except Exception as e:
+            return AgentResult(
+                agent="Reporter",
+                step="GeneratePlan",
+                status="FAILURE",
+                content=AgentContent(
+                    summary=f"Error generating plan: {str(e)}",
+                    data={"error": str(e)}
+                )
+            )
+
 

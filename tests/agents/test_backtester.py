@@ -28,13 +28,15 @@ class TestBacktesterAgent:
         assert backtester is not None
         assert backtester.output_base_dir.exists()
     
-    def test_output_directory_creation(self, backtester):
+    def test_output_directory_creation(self, backtester, sample_factor_yaml, sample_prices_returns):
         """Test output directory creation."""
+        prices, returns = sample_prices_returns
         run_id = "test_run_123"
+        
         result = backtester.run_backtest(
-            factor_yaml="name: Test",
-            prices_df=None,
-            returns_df=None,
+            factor_yaml=sample_factor_yaml,
+            prices_df=prices,
+            returns_df=returns,
             run_id=run_id
         )
         

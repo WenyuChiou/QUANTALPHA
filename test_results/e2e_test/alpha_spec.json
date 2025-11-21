@@ -1,0 +1,51 @@
+{
+  "name": "momentum_21_63_volscaled",
+  "universe": "sp500",
+  "frequency": "D",
+  "signal": {
+    "definitions": [
+      {
+        "id": "r_d",
+        "expr": "ln(P_t/P_{t-1})",
+        "lag": 1
+      },
+      {
+        "id": "ret_21",
+        "expr": "exp(sum_{k=1..21}(r_{t-k}))-1"
+      },
+      {
+        "id": "mom_21",
+        "expr": "(RET_21-mean_{63}(RET_21))/std_{63}(RET_21)"
+      },
+      {
+        "id": "ret_63",
+        "expr": "exp(sum_{k=1..63}(r_{t-k}))-1"
+      },
+      {
+        "id": "mom_63",
+        "expr": "(RET_63-mean_{63}(RET_63))/std_{63}(RET_63)"
+      },
+      {
+        "id": "rv_21",
+        "expr": "ROLL_STD(RET_D, 21)"
+      }
+    ],
+    "gating": []
+  },
+  "portfolio": {
+    "construction": "long_short_deciles",
+    "weighting": "equal",
+    "rebalance": "W-FRI",
+    "costs": {
+      "bps_per_trade": 5,
+      "borrow_bps": 50
+    },
+    "turnover_cap_monthly": 2.0
+  },
+  "validation": {
+    "no_lookahead": true,
+    "purge_days": 5,
+    "embargo_days": 2,
+    "min_history_days": 252
+  }
+}

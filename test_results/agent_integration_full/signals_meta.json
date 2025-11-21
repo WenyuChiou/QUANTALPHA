@@ -1,0 +1,21 @@
+{
+  "factor_name": "momentum_vol_adjusted",
+  "num_signals": 5,
+  "num_observations": 1461,
+  "date_range": [
+    "2020-01-01",
+    "2023-12-31"
+  ],
+  "signal_names": [
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "META"
+  ],
+  "coverage": 0.999315537303217,
+  "null_rate": 0.0006844626967830253,
+  "standardization": "zscore_63",
+  "universe_size": 5,
+  "computed_at": "2025-11-21T00:49:13.573981"
+}

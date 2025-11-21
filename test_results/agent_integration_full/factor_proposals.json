@@ -1,0 +1,15 @@
+{
+  "proposals": [
+    {
+      "name": "momentum_vol_adjusted",
+      "description": "Momentum signal adjusted by realized volatility",
+      "hypothesis": "Vol-adjusted momentum is more stable than raw momentum",
+      "yaml_spec": "\nname: \"momentum_vol_adjusted\"\nuniverse: \"sp500\"\nfrequency: \"D\"\nsignals:\n  - id: \"mom_21\"\n    expr: \"RET_21\"\n    standardize: \"zscore_63\"\n  - id: \"vol_21\"\n    expr: \"ROLL_STD(RET_D, 21)\"\nportfolio:\n  scheme: \"long_short_deciles\"\n  weight: \"equal\"\n  rebalance: \"W-FRI\"\n"
+    }
+  ],
+  "rationale": "Volatility normalization reduces signal noise in turbulent markets",
+  "rag_sources": [
+    "momentum_basics.pdf",
+    "volatility_scaling.pdf"
+  ]
+}

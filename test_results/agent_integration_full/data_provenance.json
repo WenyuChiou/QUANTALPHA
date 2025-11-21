@@ -1,0 +1,23 @@
+{
+  "source": "synthetic",
+  "tickers": [
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "META"
+  ],
+  "start_date": "2020-01-01",
+  "end_date": "2023-12-31",
+  "fields": [
+    "Close"
+  ],
+  "rows": 1461,
+  "fetched_at": "2025-11-21T00:49:13.568655",
+  "cache_path": null,
+  "data_quality": {
+    "missing_rate": 0.0,
+    "outliers_detected": 0
+  },
+  "adjustments": null
+}

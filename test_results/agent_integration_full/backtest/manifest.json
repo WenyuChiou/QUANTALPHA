@@ -1,0 +1,42 @@
+{
+  "run_id": "momentum_vol_adjusted_20251121_004914",
+  "factor_name": "momentum_vol_adjusted",
+  "created_at": "2025-11-21T00:49:14.663090",
+  "completed_at": "2025-11-21T00:49:14.663091",
+  "status": "completed",
+  "artifacts": {
+    "metrics": {
+      "path": "metrics.json",
+      "checksum": "02e88b2d81bba1aac07f2f1e5ed61b270e436e31b6b70371634addbb82d1f76c",
+      "size_bytes": 620,
+      "created_at": "2025-11-21T00:49:14.049912",
+      "artifact_type": "metrics"
+    },
+    "signals": {
+      "path": "signals.parquet",
+      "checksum": "3340a633a3df141791e841a1b26f9e270a5c90be68be4e0759e0502b23dc7af5",
+      "size_bytes": 85542,
+      "created_at": "2025-11-21T00:49:14.071539",
+      "artifact_type": "signals"
+    },
+    "equity_curve": {
+      "path": "equity_curve.parquet",
+      "checksum": "34c3029496424fda2d33cf14ca91d96be87746ffc9b92e5f5328de868a8fb4e5",
+      "size_bytes": 7808,
+      "created_at": "2025-11-21T00:49:14.073581",
+      "artifact_type": "equity_curve"
+    },
+    "equity_curve_3panel": {
+      "path": "charts\\equity_curve_3panel.png",
+      "checksum": "a073cb7adaa355c2d36c802cb256bbc5cfb854efeb73f5f6780e75608d624858",
+      "size_bytes": 180289,
+      "created_at": "2025-11-21T00:49:14.615300",
+      "artifact_type": "equity_curve"
+    }
+  },
+  "metadata": {
+    "backtest_config": {},
+    "is_valid": false,
+    "num_issues": 6
+  }
+}

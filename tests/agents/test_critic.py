@@ -13,7 +13,9 @@ class TestCriticAgent:
     @pytest.fixture
     def critic(self, temp_db):
         """Create Critic Agent instance."""
-        with patch('src.agents.critic.Ollama'):
+        # Mock both possible import paths
+        with patch('langchain_community.llms.Ollama'), \
+             patch('langchain.llms.Ollama'):
             agent = CriticAgent(
                 model_name="deepseek-r1",
                 db_path=temp_db.db_path

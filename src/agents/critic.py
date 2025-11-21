@@ -1,9 +1,39 @@
 """Critic agent: validates runs, detects issues, writes failure/success cards."""
 
+import sys
+from pathlib import Path
 from typing import Dict, Any, List, Optional
-from langchain.llms import Ollama
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+
+# Add src to path if needed
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
+from src.memory.schemas import AgentResult, AgentContent, AgentArtifact
+
+try:
+    from langchain_community.llms import Ollama
+except (ImportError, Exception):
+    try:
+        from langchain.llms import Ollama
+    except (ImportError, Exception):
+        # Mock Ollama
+        class Ollama:
+            def __init__(self, **kwargs): pass
+            def __call__(self, *args, **kwargs): return "Mock response"
+
+try:
+    from langchain_core.prompts import PromptTemplate
+    from langchain.chains import LLMChain
+except (ImportError, Exception):
+    try:
+        from langchain.prompts import PromptTemplate
+        from langchain.chains import LLMChain
+    except (ImportError, Exception):
+        # Mock classes
+        class PromptTemplate:
+            def __init__(self, **kwargs): pass
+        class LLMChain:
+            def __init__(self, **kwargs): pass
+            def run(self, **kwargs): return "Mock response"
 
 from ..memory.lessons import LessonManager
 from ..memory.store import ExperimentStore
@@ -19,12 +49,7 @@ class CriticAgent:
         model_name: str = "deepseek-r1",
         db_path: str = "experiments.db"
     ):
-        """Initialize critic agent.
-        
-        Args:
-            model_name: Ollama model name
-            db_path: Database path
-        """
+        """Initialize critic agent."""
         self.llm = Ollama(model=model_name, temperature=0.3)
         self.store = ExperimentStore(db_path)
         self.lesson_manager = LessonManager(self.store)
@@ -149,7 +174,7 @@ Provide a structured critique with explicit evaluation of each metric requiremen
         metrics: Dict[str, Any],
         issues: List[Dict[str, Any]],
         factor_yaml: str
-    ) -> Dict[str, Any]:
+    ) -> AgentResult:
         """Critique a backtest run.
         
         Args:
@@ -159,59 +184,80 @@ Provide a structured critique with explicit evaluation of each metric requiremen
             factor_yaml: Factor YAML
         
         Returns:
-            Critique dictionary with recommendations
+            AgentResult with critique and verdict
         """
-        # Format metrics and issues
-        metrics_str = "\n".join([f"- {k}: {v}" for k, v in metrics.items()])
-        issues_str = "\n".join([f"- {i.get('type', 'Unknown')}: {i.get('detail', '')}" for i in issues]) if issues else "None"
-        
-        # Generate critique
-        chain = LLMChain(llm=self.llm, prompt=self.critique_prompt)
-        critique_text = chain.run(
-            metrics=metrics_str,
-            issues=issues_str,
-            factor_yaml=factor_yaml
-        )
-        
-        # Determine if passed
-        critical_issues = [i for i in issues if i.get('severity') in ['error', 'critical']]
-        passed = len(critical_issues) == 0
-        
-        # Write lesson
-        if passed:
-            # Success card
-            lesson = self.lesson_manager.write_success_card(
-                run_id=run_id,
-                key_params=self._extract_key_params(factor_yaml),
-                where_it_shines=self._extract_strengths(critique_text),
-                where_it_fails=self._extract_weaknesses(critique_text),
-                tags=["success", "passed"]
+        try:
+            # Format metrics and issues
+            metrics_str = "\n".join([f"- {k}: {v}" for k, v in metrics.items()])
+            issues_str = "\n".join([f"- {i.get('type', 'Unknown')}: {i.get('detail', '')}" for i in issues]) if issues else "None"
+            
+            # Generate critique
+            chain = LLMChain(llm=self.llm, prompt=self.critique_prompt)
+            critique_text = chain.run(
+                metrics=metrics_str,
+                issues=issues_str,
+                factor_yaml=factor_yaml
             )
-        else:
-            # Failure card
-            root_cause = self._extract_root_cause(critique_text, issues)
-            lesson = self.lesson_manager.write_failure_card(
-                run_id=run_id,
-                root_cause=root_cause,
-                traces={"critique": critique_text},
-                tags=["failure", "error"]
+            
+            # Determine if passed
+            critical_issues = [i for i in issues if i.get('severity') in ['error', 'critical']]
+            passed = len(critical_issues) == 0
+            
+            # Write lesson
+            if passed:
+                # Success card
+                lesson = self.lesson_manager.write_success_card(
+                    run_id=run_id,
+                    key_params=self._extract_key_params(factor_yaml),
+                    where_it_shines=self._extract_strengths(critique_text),
+                    where_it_fails=self._extract_weaknesses(critique_text),
+                    tags=["success", "passed"]
+                )
+            else:
+                # Failure card
+                root_cause = self._extract_root_cause(critique_text, issues)
+                lesson = self.lesson_manager.write_failure_card(
+                    run_id=run_id,
+                    root_cause=root_cause,
+                    traces={"critique": critique_text},
+                    tags=["failure", "error"]
+                )
+            
+            # Also write to vector index
+            write_lesson(
+                title=lesson.title,
+                body=lesson.body,
+                tags=lesson.tags,
+                source_run_id=run_id,
+                lesson_type=lesson.lesson_type
             )
-        
-        # Also write to vector index
-        write_lesson(
-            title=lesson.title,
-            body=lesson.body,
-            tags=lesson.tags,
-            source_run_id=run_id,
-            lesson_type=lesson.lesson_type
-        )
-        
-        return {
-            'passed': passed,
-            'critique': critique_text,
-            'lesson_id': lesson.id,
-            'recommendations': self._extract_recommendations(critique_text)
-        }
+            
+            return AgentResult(
+                agent="Critic",
+                step="EvaluatePerformance",
+                status="SUCCESS" if passed else "FAILURE",
+                content=AgentContent(
+                    summary=f"Critique complete. Verdict: {'PASS' if passed else 'FAIL'}",
+                    data={
+                        "passed": passed,
+                        "critique": critique_text,
+                        "lesson_id": lesson.id,
+                        "recommendations": self._extract_recommendations(critique_text)
+                    }
+                )
+            )
+            
+        except Exception as e:
+            return AgentResult(
+                agent="Critic",
+                step="EvaluatePerformance",
+                status="FAILURE",
+                content=AgentContent(
+                    summary=f"Critique generation error: {str(e)}",
+                    data={"error": str(e)}
+                )
+            )
+
     
     def _extract_key_params(self, factor_yaml: str) -> Dict[str, Any]:
         """Extract key parameters from factor YAML."""

@@ -114,8 +114,7 @@ class Lesson(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Additional metadata
-    metadata = Column(JSON)
-
+    meta_data = Column(JSON)
 
 class ExperimentStore:
     """Interface for interacting with the experiment database."""
@@ -274,7 +273,7 @@ class ExperimentStore:
                 tags=tags or [],
                 source_run_id=source_run_id,
                 lesson_type=lesson_type,
-                metadata=metadata or {}
+                meta_data=metadata or {}
             )
             session.add(lesson)
             session.commit()

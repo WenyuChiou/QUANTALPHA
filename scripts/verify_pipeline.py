@@ -52,8 +52,9 @@ def verify_database():
     print("\nVerifying database...")
     try:
         from src.memory.store import ExperimentStore
+        import time
         
-        db_path = "verify_test.db"
+        db_path = f"verify_test_{int(time.time())}.db"
         store = ExperimentStore(db_path)
         
         factor = store.create_factor(
@@ -62,11 +63,15 @@ def verify_database():
             tags=["test"]
         )
         
+        # Close connection before deleting
+        store.engine.dispose()
         Path(db_path).unlink(missing_ok=True)
         print(f"✓ Database operations work")
         return True
     except Exception as e:
         print(f"✗ Database failed: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def verify_metrics():

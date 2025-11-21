@@ -55,8 +55,12 @@ def create_walk_forward_splits(
     current_start = start_date
     
     for i in range(n_splits):
-        train_start = current_start
+        # Expanding window: start is fixed, end moves forward
+        train_start = start_date
         train_end = train_start + timedelta(days=min_train_days + i * split_size)
+        
+        # Purge gap (embargo) prevents leakage from training data into test data
+        # especially for overlapping labels (e.g., 1-month returns)
         test_start = train_end + timedelta(days=purge_gap_days)
         test_end = test_start + timedelta(days=min_test_days)
         
@@ -70,7 +74,8 @@ def create_walk_forward_splits(
             'test_end': test_end
         })
         
-        current_start = train_start + timedelta(days=split_size)
+        # current_start not needed for expanding window
+        # current_start = train_start + timedelta(days=split_size)
     
     return splits
 

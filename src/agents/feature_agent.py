@@ -1,10 +1,16 @@
 """Feature agent: executes Factor DSL and computes features."""
 
+import sys
+from pathlib import Path
 from typing import Dict, Any, Optional
 import pandas as pd
 
-from ..factors.dsl import DSLParser
-from ..tools.compute_factor import compute_factor
+# Add src to path if needed
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
+from src.memory.schemas import AgentResult, AgentContent, AgentArtifact
+from src.factors.dsl import DSLParser
+from src.tools.compute_factor import compute_factor
 
 
 class FeatureAgent:
@@ -19,7 +25,7 @@ class FeatureAgent:
         factor_yaml: str,
         prices_df: pd.DataFrame,
         returns_df: Optional[pd.DataFrame] = None
-    ) -> Dict[str, Any]:
+    ) -> AgentResult:
         """Compute factor features from DSL.
         
         Args:
@@ -28,45 +34,71 @@ class FeatureAgent:
             returns_df: Optional returns DataFrame
         
         Returns:
-            Dictionary with signals, schema, warnings, validation results
+            AgentResult with signals and validation status
         """
         # Parse and validate
         try:
             spec = self.parser.parse(factor_yaml)
         except Exception as e:
-            return {
-                'success': False,
-                'error': f"Parse error: {e}",
-                'signals': None
-            }
+            return AgentResult(
+                agent="FeatureEngineer",
+                step="ValidateAndCompute",
+                status="FAILURE",
+                content=AgentContent(
+                    summary=f"DSL Parsing failed: {str(e)}",
+                    data={"error": str(e)}
+                )
+            )
         
         # Validate no-lookahead
         is_valid, warnings = self.parser.validate_no_lookahead(spec)
         
         if not is_valid:
-            return {
-                'success': False,
-                'error': "Lookahead validation failed",
-                'warnings': warnings,
-                'signals': None
-            }
+            return AgentResult(
+                agent="FeatureEngineer",
+                step="ValidateAndCompute",
+                status="FAILURE",
+                content=AgentContent(
+                    summary="Lookahead bias detected in factor definition.",
+                    data={
+                        "error": "Lookahead validation failed",
+                        "warnings": warnings
+                    }
+                )
+            )
         
         # Compute signals
         result = compute_factor(factor_yaml, prices_df, returns_df)
         
         if result['signals'] is None:
-            return {
-                'success': False,
-                'error': result.get('error', 'Unknown error'),
-                'warnings': result.get('warnings', []),
-                'signals': None
-            }
+            return AgentResult(
+                agent="FeatureEngineer",
+                step="ValidateAndCompute",
+                status="FAILURE",
+                content=AgentContent(
+                    summary="Factor computation failed.",
+                    data={
+                        "error": result.get('error', 'Unknown error'),
+                        "warnings": result.get('warnings', [])
+                    }
+                )
+            )
         
-        return {
-            'success': True,
-            'signals': result['signals'],
-            'schema': result['schema'],
-            'warnings': result.get('warnings', []),
-            'spec': spec
-        }
+        return AgentResult(
+            agent="FeatureEngineer",
+            step="ValidateAndCompute",
+            status="SUCCESS",
+            content=AgentContent(
+                summary="Factor signals computed successfully.",
+                data={
+                    "signals": result['signals'], # Note: This might be large for JSON serialization, consider saving to parquet
+                    "schema": result['schema'],
+                    "warnings": result.get('warnings', [])
+                },
+                artifacts=[
+                    AgentArtifact(name="signals", path="memory", type="dataframe", description="Computed factor signals")
+                ]
+            )
+        )
+
 

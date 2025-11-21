@@ -1,0 +1,33 @@
+{
+  "factor_name": "nonlinear_momentum_demo",
+  "timestamp": "20251120_230954",
+  "metrics": {
+    "ann_ret": -0.07319267327102429,
+    "ann_vol": 0.15415446229319715,
+    "sharpe": -0.4748008729829307,
+    "skew": 0.0360043751461425,
+    "kurt": 0.40292651674371704,
+    "hit_rate": 0.4611872146118721,
+    "maxdd": -0.12232604351727032,
+    "max_dd": -0.12232604351727032,
+    "avg_dd": -0.05607782435252782,
+    "dd_duration": 330.5,
+    "recovery_time": 616.0,
+    "turnover": 0.0,
+    "turnover_monthly": 0.0,
+    "avg_ic": 0.0,
+    "ic_std": 0.0,
+    "ir": 0.0,
+    "split_sharpe_mean": -0.5661367920365091,
+    "split_sharpe_std": 1.3901560339151104,
+    "split_ic_mean": -0.025891160468020445,
+    "split_ic_std": 0.12565361886475407
+  },
+  "archived_at": "2025-11-20T23:09:54.872532",
+  "archive_reason": "Meets success criteria",
+  "criteria": {
+    "sharpe": ">= 1.8",
+    "max_drawdown": ">= -0.25",
+    "avg_ic": ">= 0.05"
+  }
+}

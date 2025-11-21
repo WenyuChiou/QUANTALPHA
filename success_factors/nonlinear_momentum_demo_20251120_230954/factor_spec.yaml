@@ -1,0 +1,24 @@
+
+name: nonlinear_momentum_demo
+universe: test_universe
+frequency: D
+signals:
+  - id: mom_signal
+    custom_code: |
+      # Nonlinear momentum with volatility adjustment
+      # Calculate 21-day momentum
+      mom_21 = returns.rolling(21).mean()
+      
+      # Calculate 21-day volatility
+      vol_21 = returns.rolling(21).std()
+      
+      # Adjust momentum by volatility (simple nonlinear interaction)
+      # Avoid division by zero
+      adj_mom = mom_21 / (vol_21 + 1e-6)
+      
+      # Rank across assets (cross-sectional)
+      result = adj_mom.rank(axis=1, pct=True)
+    code_type: custom
+portfolio:
+  long_short: true
+  top_n: 2

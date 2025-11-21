@@ -29,28 +29,63 @@ class DSLParser:
     def validate_no_lookahead(self, spec: FactorSpec) -> Tuple[bool, List[str]]:
         """Validate that the factor has no lookahead issues.
         
+        Handles both DSL expressions and custom Python code.
+        
         Returns:
             (is_valid, list_of_warnings)
         """
         warnings = []
         
-        # Check each signal expression
+        # Check each signal
         for signal in spec.signals:
-            expr_warnings = self._check_expression(signal.expr, signal.id)
-            warnings.extend(expr_warnings)
+            # Handle DSL expression
+            if signal.expr:
+                expr_warnings = self._check_expression(signal.expr, signal.id)
+                warnings.extend(expr_warnings)
+            
+            # Handle custom code
+            if signal.custom_code:
+                code_warnings = self._check_custom_code(signal.custom_code, signal.id)
+                warnings.extend(code_warnings)
             
             # Check normalization
             if signal.normalize:
                 norm_warnings = self._check_expression(signal.normalize, f"{signal.id}_normalize")
                 warnings.extend(norm_warnings)
         
-        # Check for common lookahead patterns
+        # Check for common lookahead patterns in YAML
         yaml_str = spec.to_yaml().lower()
         if "future" in yaml_str or "forward" in yaml_str:
             warnings.append("Found 'future' or 'forward' keywords - potential lookahead")
         
         is_valid = len([w for w in warnings if "ERROR" in w]) == 0
         return is_valid, warnings
+    
+    def _check_custom_code(self, code: str, context: str) -> List[str]:
+        """Check custom Python code for lookahead issues.
+        
+        Uses the code validator from the nonlinear module.
+        """
+        warnings = []
+        
+        try:
+            from ..factors.code_validator import CodeValidator
+            
+            validator = CodeValidator()
+            is_valid, errors, code_warnings = validator.validate(code)
+            
+            # Convert errors to warnings with context
+            for error in errors:
+                warnings.append(f"ERROR in {context}: {error}")
+            
+            # Add code warnings with context
+            for warning in code_warnings:
+                warnings.append(f"WARNING in {context}: {warning}")
+        
+        except ImportError:
+            warnings.append(f"WARNING: Could not import code validator for {context}")
+        
+        return warnings
     
     def _check_expression(self, expr: str, context: str) -> List[str]:
         """Check an expression for lookahead issues."""
@@ -59,10 +94,10 @@ class DSLParser:
         
         # Check for future-looking function names
         future_patterns = [
-            r'\bfuture\w*\s*\(',
-            r'\bforward\w*\s*\(',
-            r'\blead\s*\(',
-            r'\bshift\s*\(\s*-\d+',  # Negative shift (future)
+            r'\bfuture\w*\s*\(',     # Matches future_return(), future_val(), etc.
+            r'\bforward\w*\s*\(',    # Matches forward_return(), etc.
+            r'\blead\s*\(',          # Matches lead() which is opposite of lag()
+            r'\bshift\s*\(\s*-\d+',  # Matches shift(-n) which shifts data from future to present
         ]
         
         for pattern in future_patterns:
@@ -217,7 +252,7 @@ class DSLParser:
             func_matches = re.findall(r'(\w+)\s*\(', signal.expr.upper())
             for func in func_matches:
                 if func not in [op.upper() for op in supported_ops] and func not in ['ZSCORE_252', 'ZSCORE_63', 'ZSCORE_21']:
-                    warnings.append(f"WARNING: {signal.id} uses unsupported operation: {func}")
+                    warnings.append(f"ERROR: {signal.id} uses unsupported operation: {func}")
         
         is_valid = len([w for w in warnings if "ERROR" in w]) == 0
         return is_valid, warnings
