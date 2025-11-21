@@ -1,96 +1,132 @@
 {
-    "version": "2.0",
-    "updated_at": "2025-11-21T01:13:00",
-    "description": "Research-based policy rules for alpha discovery, updated with stricter standards",
+    "version": "3.0",
+    "updated_at": "2025-11-21T01:22:00",
+    "description": "Research-based policy rules with 2021+ AI/ML advances in quantitative finance",
+    "ai_research_basis": {
+        "llm_applications": "GPT-4 achieves 60% earnings prediction accuracy (U. Chicago 2024), outperforming human analysts (53-57%)",
+        "rag_for_alpha": "RAG systems identify short-term market inefficiencies by combining qualitative sentiment with quantitative modeling (AlphaFin 2024)",
+        "chain_of_thought": "CoT prompting significantly improves LLM performance on complex financial reasoning (FinCoT 2024)",
+        "agent_based_trading": "LLM-based trading agents demonstrate consistent strategy adherence and realistic market dynamics (NeurIPS 2024)"
+    },
     "rules": [
         {
             "rule_id": "R001",
             "category": "signal_quality",
             "condition": "avg_ic < 0.05",
-            "action": "Add more signals or improve signal construction. Research shows IC > 0.05 is minimum for viable factors.",
+            "action": "Add more signals or improve signal construction. Consider using LLM-based sentiment analysis or RAG to augment traditional signals.",
             "priority": "high",
-            "research_basis": "Grinold & Kahn (2000): IC of 0.05-0.10 typical for good factors",
+            "research_basis": "Grinold & Kahn (2000): IC 0.05-0.10 typical for good factors. Enhanced by LLM sentiment analysis (2023-2024)",
+            "ai_enhancement": "Use RAG to retrieve relevant news/social media sentiment for signal augmentation",
             "learned_from": []
         },
         {
             "rule_id": "R002",
             "category": "risk_management",
             "condition": "maxdd < -0.25",
-            "action": "Implement position sizing, volatility targeting, or regime-aware risk management",
+            "action": "Implement position sizing, volatility targeting, or regime-aware risk management using LLM-based market regime detection",
             "priority": "critical",
-            "research_basis": "Drawdown < -25% indicates insufficient risk control (Calmar ratio best practice)",
+            "research_basis": "Calmar ratio best practice. Enhanced by LLM-based risk modeling (RiskLabs 2024)",
+            "ai_enhancement": "Use multimodal LLMs to predict VaR and market volatility from text+audio+time-series",
             "learned_from": []
         },
         {
             "rule_id": "R003",
             "category": "transaction_costs",
             "condition": "turnover_monthly > 100",
-            "action": "Reduce rebalance frequency to weekly/monthly. High turnover erodes alpha.",
+            "action": "Reduce rebalance frequency to weekly/monthly. Use LLM-based trade execution optimization.",
             "priority": "high",
-            "research_basis": "Frazzini et al. (2018): Transaction costs can eliminate 50%+ of gross alpha",
+            "research_basis": "Frazzini et al. (2018): Transaction costs eliminate 50%+ of gross alpha",
+            "ai_enhancement": "Apply prompt engineering to optimize trade timing and reduce market impact",
             "learned_from": []
         },
         {
             "rule_id": "R004",
             "category": "performance",
             "condition": "sharpe < 1.8",
-            "action": "Improve signal quality, add regime filters, or combine with other factors. Target Sharpe > 1.8 for institutional quality.",
+            "action": "Improve signal quality using Chain-of-Thought reasoning for multi-step factor construction. Target Sharpe > 1.8.",
             "priority": "critical",
-            "research_basis": "Institutional standards: Sharpe > 1.5 good, > 2.0 excellent (AQR, Two Sigma benchmarks)",
+            "research_basis": "Institutional standards (AQR, Two Sigma). Enhanced by CoT prompting (FinCoT 2024)",
+            "ai_enhancement": "Use FinCoT framework for structured financial reasoning in factor design",
             "learned_from": []
         },
         {
             "rule_id": "R005",
             "category": "stability",
             "condition": "split_sharpe_std > 1.5",
-            "action": "Add regime awareness or reduce lookback window. Unstable performance indicates overfitting.",
+            "action": "Add regime awareness using LLM-based economic simulation. Reduce lookback window to avoid overfitting.",
             "priority": "medium",
-            "research_basis": "Harvey et al. (2016): Stability across subperiods critical to avoid false discoveries",
+            "research_basis": "Harvey et al. (2016): Stability critical. Enhanced by LLM agent simulations (Horton 2023)",
+            "ai_enhancement": "Use LLM agents ('Homo Silicus') to simulate market regimes and test factor robustness",
             "learned_from": []
         },
         {
             "rule_id": "R006",
             "category": "momentum_specific",
             "condition": "factor_type == 'momentum' and sharpe < 2.0",
-            "action": "Momentum factors should achieve Sharpe > 2.0. Add volatility scaling or regime filter.",
+            "action": "Momentum factors should achieve Sharpe > 2.0. Add volatility scaling and use LLM-based sentiment momentum.",
             "priority": "high",
-            "research_basis": "Jegadeesh & Titman (1993, 2001): Momentum Sharpe typically 1.5-2.5 with proper implementation",
+            "research_basis": "Jegadeesh & Titman (1993, 2001): Momentum Sharpe 1.5-2.5. Enhanced by LLM sentiment (2023-2024)",
+            "ai_enhancement": "Combine price momentum with LLM-extracted sentiment momentum from news/social media",
             "learned_from": []
         },
         {
             "rule_id": "R007",
             "category": "ic_stability",
             "condition": "ic_std > 0.15",
-            "action": "IC volatility too high. Indicates inconsistent predictive power. Add signal smoothing or regime filters.",
+            "action": "IC volatility too high. Use RAG to retrieve historical patterns and smooth IC predictions.",
             "priority": "medium",
-            "research_basis": "Information Ratio = IC / IC_std. High IC_std reduces IR and indicates instability",
+            "research_basis": "Information Ratio = IC / IC_std. Enhanced by RAG for time-series forecasting (2024)",
+            "ai_enhancement": "Apply RAG framework to incorporate salient historical patterns for IC stabilization",
             "learned_from": []
         },
         {
             "rule_id": "R008",
             "category": "capacity",
             "condition": "turnover_monthly > 150",
-            "action": "Turnover too high for scalability. Reduce to < 100% for institutional capacity.",
+            "action": "Turnover too high for scalability. Use LLM-based portfolio optimization to reduce turnover while maintaining alpha.",
             "priority": "high",
-            "research_basis": "Capacity constraints: High turnover limits AUM scalability (Pedersen 2015)",
+            "research_basis": "Pedersen (2015): High turnover limits AUM scalability",
+            "ai_enhancement": "Apply GPT-4 or Claude for portfolio optimization with turnover constraints",
             "learned_from": []
         },
         {
             "rule_id": "R009",
             "category": "tail_risk",
             "condition": "skew < -0.5",
-            "action": "Negative skew indicates tail risk. Add downside protection or position limits.",
+            "action": "Negative skew indicates tail risk. Use LLM-based anomaly detection to identify and hedge tail events.",
             "priority": "medium",
-            "research_basis": "Taleb (2007): Negative skew = exposure to black swan events",
+            "research_basis": "Taleb (2007): Negative skew = black swan exposure. Enhanced by LLM anomaly detection (2024)",
+            "ai_enhancement": "Deploy multi-agent LLM framework for real-time anomaly detection",
             "learned_from": []
         },
         {
             "rule_id": "R010",
             "category": "diversification",
             "condition": "hit_rate < 0.52",
-            "action": "Low hit rate suggests weak signal. Need hit rate > 52% for consistent edge.",
+            "action": "Low hit rate suggests weak signal. Use LLM-based Q&A on financial reports to improve signal quality.",
             "priority": "medium",
-            "research_basis": "Statistical significance: 52%+ hit rate needed for p < 0.05 over 250 trades",
+            "research_basis": "Statistical significance: 52%+ hit rate for p < 0.05. Enhanced by LLM financial Q&A (AlphaFin 2024)",
+            "ai_enhancement": "Apply RAG-based financial Q&A to extract alpha signals from earnings reports",
+            "learned_from": []
+        },
+        {
+            "rule_id": "R011",
+            "category": "llm_integration",
+            "condition": "no_llm_features == true",
+            "action": "Modern factors should leverage LLM capabilities. Consider adding: sentiment analysis, earnings call analysis, or regime detection.",
+            "priority": "medium",
+            "research_basis": "LLMs revolutionizing quant finance 2023-2024. GPT-4 60% earnings prediction accuracy (U. Chicago 2024)",
+            "ai_enhancement": "Integrate at least one LLM-based feature: sentiment, earnings prediction, or regime classification",
+            "learned_from": []
+        },
+        {
+            "rule_id": "R012",
+            "category": "prompt_engineering",
+            "condition": "using_llm == true and no_cot_prompting == true",
+            "action": "When using LLMs, apply Chain-of-Thought prompting for better reasoning. Use FinCoT framework for financial tasks.",
+            "priority": "low",
+            "research_basis": "CoT prompting significantly improves LLM performance on complex problems (2023-2024)",
+            "ai_enhancement": "Implement structured CoT prompts with step-by-step financial reasoning",
             "learned_from": []
         }
     ],
@@ -114,6 +150,20 @@
         "Jegadeesh & Titman (1993): Returns to Buying Winners and Selling Losers",
         "Frazzini, Israel, Moskowitz (2018): Trading Costs",
         "Pedersen (2015): Efficiently Inefficient",
-        "Taleb (2007): The Black Swan"
-    ]
+        "Taleb (2007): The Black Swan",
+        "U. Chicago (2024): GPT-4 Financial Statement Analysis (60% earnings prediction)",
+        "AlphaFin (2024): RAG for Stock Trend Prediction and Financial Q&A",
+        "FinCoT (2024): Structured Chain-of-Thought for Financial Reasoning",
+        "Horton (2023): LLMs as Economic Agents ('Homo Silicus')",
+        "RiskLabs (2024): Multimodal LLMs for Financial Risk Modeling",
+        "NeurIPS (2024): LLM-based Trading Agents for Portfolio Management"
+    ],
+    "llm_recommendations": {
+        "sentiment_analysis": "Use GPT-4 or Claude for news/social media sentiment extraction",
+        "earnings_prediction": "GPT-4 achieves 60% accuracy in earnings direction prediction",
+        "portfolio_optimization": "Claude Sonnet 4 excels in financial due diligence and analytical depth",
+        "regime_detection": "Use LLM agent simulations to identify market regime shifts",
+        "rag_applications": "RAG systems for alpha generation from real-time news and reports",
+        "cot_prompting": "FinCoT framework for structured multi-step financial reasoning"
+    }
 }

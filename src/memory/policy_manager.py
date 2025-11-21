@@ -101,13 +101,25 @@ class PolicyManager:
                 else:
                     return False
         
+        # Skip boolean conditions (e.g., "no_llm_features == true")
+        # These are for future enhancements and not currently evaluated
+        if '== true' in condition or '== false' in condition:
+            return False
+        
         # Parse metric condition
         for op in ['<', '>', '<=', '>=', '==', '!=']:
             if op in condition:
                 parts = condition.split(op)
                 if len(parts) == 2:
                     metric_name = parts[0].strip()
-                    threshold = float(parts[1].strip())
+                    threshold_str = parts[1].strip()
+                    
+                    # Try to convert to float
+                    try:
+                        threshold = float(threshold_str)
+                    except ValueError:
+                        # Skip non-numeric conditions
+                        return False
                     
                     # Get metric value
                     metric_value = metrics.get(metric_name)
@@ -129,6 +141,7 @@ class PolicyManager:
                         return metric_value != threshold
         
         return False
+
     
     def check_constraints(self, metrics: Dict[str, Any]) -> tuple[bool, List[str]]:
         """Check if metrics meet global constraints.

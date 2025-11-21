@@ -43,16 +43,15 @@
   ],
   "applicable_rules": [
     "R001",
-    "R002",
     "R003",
-    "R004"
+    "R004",
+    "R010"
   ],
   "constraint_violations": [
-    "Sharpe 0.50 < 1.0",
-    "MaxDD -25.00% < -20.00%",
+    "Sharpe 0.50 < 1.8",
     "Turnover 150.0% > 100.0%",
     "Avg IC 0.030 < 0.05"
   ],
-  "lesson_id": 2136,
-  "created_at": "2025-11-21T01:10:21.232013"
+  "lesson_id": 2752,
+  "created_at": "2025-11-21T01:24:59.781568"
 }
